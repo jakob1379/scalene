@@ -9,6 +9,7 @@ authors = [
     {name = "Juan Altmayer Pizzorno", email = "juan@altmayer.com"},
 ]
 requires-python = ">=3.11,!=3.11.0"
+license = "Apache-2.0"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Framework :: IPython",
@@ -24,7 +25,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows"
@@ -73,7 +73,7 @@ lint = ["mypy", "ruff", "types-PyYAML"]
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = [
-    "setuptools>=70.1",
+    "setuptools>=77",
     # its git file finder decides what goes into the sdist
     "setuptools_scm>=8",
 ]
