@@ -72,22 +72,27 @@ jobs:
 
       - name: make dev build if not a release (non-Windows version)
         if: github.event_name != 'release' && matrix.os != 'windows-latest'
-        run: echo "DEV_BUILD=$(cat devN.txt)" >> $GITHUB_ENV  # for setup.py
+        run: echo "DEV_BUILD=$(cat devN.txt)" >> $GITHUB_ENV
 
       - name: make dev build if not a release (Windows version)
         if: github.event_name != 'release' && matrix.os == 'windows-latest'
-        run: ("DEV_BUILD=" + (get-content devN.txt)) >> $env:GITHUB_ENV  # for setup.py
+        run: ("DEV_BUILD=" + (get-content devN.txt)) >> $env:GITHUB_ENV
 
       - uses: actions/checkout@v7
+
+      - name: Stamp the .devN version
+        # scikit-build-core reads the version from scalene_config.py
+        if: env.DEV_BUILD != ''
+        shell: bash
+        run: |
+          sed -i.bak -E "s/^(scalene_version = \"[^\"]+)\"/\1.dev${DEV_BUILD}\"/" scalene/scalene_config.py
+          rm scalene/scalene_config.py.bak
+          grep '^scalene_version' scalene/scalene_config.py
 
       - name: Mark workspace safe for git
         # needed for container and self-hosted runners; see https://github.com/actions/checkout/issues/766
         if: matrix.container != ''
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          # setuptool's bdist uses 'git archive' to find files, and fails silently if it can't,
-          # leading to missing files in the archive.  Run it separately to force a failure in that case.
-          (cd scalene; git archive --prefix scalene/ HEAD | tar -t > /dev/null)
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
   
       - name: select Xcode version
         # MacOS > 14.2 requires Xcode >= 15.3; otherwise loading native extension modules fails with e.g.:
@@ -118,17 +123,12 @@ jobs:
         run: |
           # twine is installed by the publish job: its dependencies (nh3,
           # cryptography) have no free-threaded 3.13 wheels.
-          pip3 install --upgrade setuptools wheel build virtualenv
+          pip3 install --upgrade build virtualenv
   
       - name: Work around arm64 support on MacOS
         # https://github.com/actions/virtual-environments/issues/2557
         if: matrix.os == 'macos-latest'
         run: sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*
-
-      - name: Install CMake on Windows
-        # CMake is required to build libscalene.dll for memory profiling on Windows
-        if: matrix.os == 'windows-latest'
-        run: choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
 
       - name: Build source dist
         if: matrix.upload_source
@@ -139,12 +139,16 @@ jobs:
         # The issue is somehow related to git providing a sh.exe (the "git shell")
         # See eg https://help.appveyor.com/discussions/problems/1531-having-issues-with-configured-git-bash
         run: bash -c "make bdist"
+        env:
+          # universal2; CMakeLists.txt adds the arm64e slice
+          ARCHFLAGS: ${{ startsWith(matrix.os, 'macos-') && '-arch x86_64 -arch arm64' || '' }}
 
       - name: Check that all required platforms are included
         if: matrix.os == 'macos-latest'
         run: |
+          python -m zipfile -e dist/*.whl wheel-contents
           for P in x86_64 arm64 arm64e; do
-            for F in build/lib.*/scalene/*.so ; do
+            for F in wheel-contents/scalene/*.so wheel-contents/scalene/*.dylib; do
               file $F | grep -q "\\b$P\\b"
               if [ $? != 0 ]; then
                 echo "$P missing"
