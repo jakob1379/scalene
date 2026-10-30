@@ -309,7 +309,7 @@ importlib.util.find_spec(mod_name)
 ### Test Dependencies
 
 ```bash
-pip install pytest pytest-asyncio hypothesis
+pip install -e ".[test]"   # pytest, pytest-asyncio, hypothesis, ipython, …
 ```
 
 ### Running Tests Across Python Versions
@@ -462,7 +462,7 @@ Key runtime dependencies:
 - `cloudpickle` - Serialization
 - `pynvml` - NVIDIA GPU support (optional)
 
-See `requirements.txt` for full list.
+See `[project.dependencies]` in `pyproject.toml` for the full list.
 
 ## CLI Structure
 

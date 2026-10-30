@@ -50,6 +50,7 @@ test = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
     "hypothesis>=6.0",
+    "ipython>=8.10",
     # TensorFlow for testing library profiler integration
     # TensorFlow doesn't support Python 3.14+ yet
     "tensorflow>=2.15; python_version < '3.14' and platform_system != 'Windows'",
@@ -65,6 +66,9 @@ test = [
 
 [project.scripts]
 scalene = "scalene.__main__:main"
+
+[dependency-groups]
+lint = ["mypy", "ruff", "types-PyYAML"]
 
 [build-system]
 build-backend = "setuptools.build_meta"
