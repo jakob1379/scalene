@@ -3,7 +3,7 @@ import sysconfig
 from os import environ, path
 from pathlib import Path
 
-from setuptools import find_packages, setup
+from setuptools import setup
 from setuptools.extension import Extension
 
 # needed for isolated environment
@@ -563,13 +563,11 @@ def bdist_wheel_options():
 
 setup(
     version=scalene_version + dev_build,
-    packages=find_packages(),
     cmdclass={
         "bdist_wheel": BdistWheelCommand,
         "egg_info": EggInfoCommand,
         "build_ext": BuildExtCommand,
     },
     ext_modules=[get_line_atomic, pywhere, native_unwind],  # Now supported on all platforms
-    include_package_data=True,
     options={"bdist_wheel": bdist_wheel_options()},
 )
