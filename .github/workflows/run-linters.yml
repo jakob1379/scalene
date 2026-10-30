@@ -23,7 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     # mypy + ruff are pure static analysis: no native build needed and
     # results are version-independent given a single mypy target version
-    # (set in pyproject.toml) and ruff's --target-version. A single matrix entry
+    # (the Python 3.12 interpreter below, as [tool.mypy] sets no
+    # python_version) and ruff's --target-version. A single matrix entry
     # is enough; the C++ extension isn't installed because nothing here
     # imports it.
     timeout-minutes: 5
