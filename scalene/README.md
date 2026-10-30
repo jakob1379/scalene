@@ -55,5 +55,5 @@
   `ScaleneTracing` handles tracing decisions and file filtering. Determines which files and functions should be profiled based on exclusion rules, profile-only patterns, and system library detection. Uses `lru_cache` for performance.
 
 * `scalene_version.py`:
-  The version number of Scalene which ultimately is reflected on `pypi` (for `pip` installs, used by `setup.py` in the top level directory).
+  The version number of Scalene which ultimately is reflected on `pypi` (for `pip` installs, read by the build backend via `pyproject.toml`).
   

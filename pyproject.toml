@@ -46,7 +46,7 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
-dynamic = ["version"]   # computed by setup.py
+dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
@@ -74,16 +74,18 @@ scalene = "scalene.__main__:main"
 lint = ["mypy", "ruff", "types-PyYAML"]
 
 [build-system]
-build-backend = "setuptools.build_meta"
-requires = [
-    "setuptools>=77",
-    # its git file finder decides what goes into the sdist
-    "setuptools_scm>=8",
-]
+build-backend = "scikit_build_core.build"
+requires = ["scikit-build-core>=0.11"]
 
-[tool.setuptools.packages.find]
-include = ["scalene*"]
-namespaces = false
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.version = ">=4.1.2"
+wheel.packages = ["scalene"]
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "scalene/scalene_config.py"
+regex = 'scalene_version = "(?P<value>[^"]+)"'
 
 [tool.pytest.ini_options]
 

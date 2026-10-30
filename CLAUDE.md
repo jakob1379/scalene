@@ -162,10 +162,18 @@ C++ code for low-overhead memory allocation tracking:
 - **`get_line_atomic.cpp`** - Atomic line number access
 - **`traceconfig.cpp`** - Trace configuration
 
-### Vendor Libraries (`vendor/`)
+### Vendor Libraries
 
-- **`Heap-Layers/`** - Memory allocator infrastructure (by Emery Berger)
-- **`printf/`** - Async-signal-safe printf implementation
+`CMakeLists.txt` fetches these at pinned commits (with hashes) into the build directory:
+
+- **Heap-Layers** - Memory allocator infrastructure (by Emery Berger)
+- **printf** - Async-signal-safe printf implementation
+- **libunwind** (Linux only) - built statically for `_scalene_unwind`
+- **Detours** (Windows only) - malloc/free hooking for `libscalene.dll`
+
+### Build
+
+`pyproject.toml` builds with scikit-build-core; `CMakeLists.txt` is the only native build description (extensions and `libscalene` on every platform). For macOS universal2 wheels set `ARCHFLAGS="-arch x86_64 -arch arm64"`.
 
 ## Key Patterns
 
