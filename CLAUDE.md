@@ -171,7 +171,7 @@ C++ code for low-overhead memory allocation tracking:
 
 ### Python Version Compatibility
 
-The codebase supports Python 3.8-3.14. Version-specific code uses:
+The codebase supports Python 3.11-3.14 (`requires-python` in `pyproject.toml`). Version-specific code uses:
 
 ```python
 if sys.version_info >= (3, 14):
@@ -180,7 +180,7 @@ else:
     # Older Python versions
 ```
 
-**Type Annotation Compatibility (Python 3.8/3.9):**
+**Type Annotation Style:** the code still uses 3.8-era annotations and `[tool.ruff] target-version = "py38"` keeps ruff from flagging them, until a dedicated modernization pass. Until then:
 - **Do NOT use `X | Y` union syntax** in runtime-evaluated annotations (PEP 604 requires Python 3.10+). Use `Optional[X]` or `Union[X, Y]` from `typing` instead.
 - **Do NOT use `list[X]`, `dict[K, V]`, `tuple[X, ...]`** in runtime-evaluated annotations (PEP 585 lowercase generics require Python 3.9+). Use `List`, `Dict`, `Tuple` from `typing` for 3.8 support.
 - Adding `from __future__ import annotations` makes all annotations strings (not evaluated at runtime), which allows modern syntax on older Python. However, this can break code that inspects annotations at runtime (e.g., dataclasses, pydantic).
@@ -315,7 +315,7 @@ pip install pytest pytest-asyncio hypothesis
 ### Running Tests Across Python Versions
 
 ```bash
-for v in 3.9 3.10 3.11 3.12 3.13 3.14; do
+for v in 3.11 3.12 3.13 3.14; do
     python$v -m pytest tests/test_coverup_83.py -v
 done
 ```
@@ -347,8 +347,8 @@ sock.bind(("", port))
 
 ## CI/CD (`.github/workflows/`)
 
-- **`run-linters.yml`** - Runs mypy and ruff on Python 3.9-3.14
-- **`tests.yml`** - Runs pytest on Python 3.9-3.14
+- **`run-linters.yml`** - Runs mypy and ruff on Python 3.12
+- **`tests.yml`** - Runs pytest on Python 3.11-3.14 (plus free-threaded 3.13t/3.14t)
 - **`build-and-upload.yml`** - Build and publish to PyPI
 
 ## Common Tasks

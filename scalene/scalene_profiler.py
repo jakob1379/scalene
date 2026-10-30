@@ -149,7 +149,7 @@ def nada(*args: Any) -> None:
 console.log = nada  # type: ignore
 
 MINIMUM_PYTHON_VERSION_MAJOR = 3
-MINIMUM_PYTHON_VERSION_MINOR = 8
+MINIMUM_PYTHON_VERSION_MINOR = 11
 
 
 def require_python(version: tuple[int, int]) -> None:

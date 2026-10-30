@@ -32,7 +32,7 @@ jobs:
       # don't let one failure cancel the rest of the matrix.
       fail-fast: false
       matrix:
-        python_version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14', '3.13t', '3.14t']
+        python_version: ['3.11', '3.12', '3.13', '3.14', '3.13t', '3.14t']
         plat: ['manylinux_2_28', 'macos-latest', 'windows-latest']
         include:
           - plat: manylinux_2_28
