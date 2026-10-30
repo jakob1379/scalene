@@ -24,7 +24,8 @@ jobs:
     # mypy + ruff are pure static analysis: no native build needed and
     # results are version-independent given a single mypy target version
     # (the Python 3.12 interpreter below, as [tool.mypy] sets no
-    # python_version) and ruff's --target-version. A single matrix entry
+    # python_version) and ruff's target version (requires-python in
+    # pyproject.toml). A single matrix entry
     # is enough; the C++ extension isn't installed because nothing here
     # imports it.
     timeout-minutes: 5
