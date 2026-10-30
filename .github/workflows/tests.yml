@@ -46,7 +46,7 @@ jobs:
         python: [ '3.11', '3.12', '3.13', '3.14', '3.13t', '3.14t' ]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: select Xcode version
       # MacOS > 14.2 requires Xcode >= 15.3; otherwise loading native extension modules fails with e.g.:
@@ -58,7 +58,7 @@ jobs:
         g++ --version
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python }}
         cache: pip
@@ -201,10 +201,10 @@ jobs:
         python: [ '3.11', '3.13' ]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python }}
         cache: pip
