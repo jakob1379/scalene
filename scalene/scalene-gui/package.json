@@ -18,9 +18,10 @@
     "typescript": "^5.3.3"
   },
   "scripts": {
-    "build": "esbuild scalene-gui.ts --bundle --minify --sourcemap --target=es2020 --outfile=scalene-gui-bundle.js --define:process.env.LANG='\"en_US.UTF-8\"'",
-    "build:dev": "esbuild scalene-gui.ts --bundle --sourcemap --target=es2020 --outfile=scalene-gui-bundle.js --define:process.env.LANG='\"en_US.UTF-8\"'",
-    "watch": "esbuild scalene-gui.ts --bundle --sourcemap --target=es2020 --outfile=scalene-gui-bundle.js --define:process.env.LANG='\"en_US.UTF-8\"' --watch",
-    "typecheck": "tsc --noEmit"
+    "build": "node ../../scalene-ui/build.mjs && cp ../../scalene-ui/dist/scalene-gui-bundle.js ../../scalene-ui/template/index.html.template .",
+    "typecheck": "tsc --noEmit",
+    "legacy:build": "esbuild scalene-gui.ts --bundle --minify --sourcemap --target=es2020 --outfile=scalene-gui-bundle.js --define:process.env.LANG='\"en_US.UTF-8\"'",
+    "legacy:build:dev": "esbuild scalene-gui.ts --bundle --sourcemap --target=es2020 --outfile=scalene-gui-bundle.js --define:process.env.LANG='\"en_US.UTF-8\"'",
+    "legacy:watch": "esbuild scalene-gui.ts --bundle --sourcemap --target=es2020 --outfile=scalene-gui-bundle.js --define:process.env.LANG='\"en_US.UTF-8\"' --watch"
   }
 }

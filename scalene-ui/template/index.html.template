@@ -1,0 +1,76 @@
+{# index.html.template — Scalene report UI (scalene-ui). Rendered by scalene_utility.generate_html
+   and launchbrowser.generate_html. #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline' data: blob:; img-src * data: blob:; connect-src * data: blob:; font-src * data: blob:; frame-src * data: blob:;">
+  <title>Scalene</title>
+  {% if standalone %}
+  <link rel="icon" href="data:image/x-icon;base64,{{ favicon_base64 }}" type="image/x-icon">
+  {% else %}
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  {% endif %}
+  <script>
+    (function () {
+      var t = null;
+      try { t = window.localStorage.getItem("scalene-theme"); } catch (e) {}
+      if (t !== "light" && t !== "dark") {
+        t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+  <style>
+    html { background: #F4F5F7; color: #0E1116; }
+    html[data-theme="dark"] { background: #07090D; color: #E8ECF2; }
+    body { margin: 0; }
+    /* Upstream test contract: these selectors must live in the template (both modes). */
+    .combined-stacks-section { scroll-margin-top: 64px; }
+    .flame-segment { position: absolute; box-sizing: border-box; pointer-events: none; }
+    /* First paint before the bundle runs (a 16 MB profile takes ~0.7 s to parse): a calm
+       placeholder, and the template footer stays hidden until the app adopts it. */
+    #scalene-footer:not(.site-footer) { visibility: hidden; }
+    .boot-note { margin: 0; padding: 38vh 16px 0; text-align: center; font: 14px/20px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #5E6676; }
+    html[data-theme="dark"] .boot-note { color: #7F8999; }
+  </style>
+  {% if not standalone %}
+  <!-- Google Analytics - disabled in standalone mode for offline support (issue #982) -->
+  <script>
+    if (navigator.onLine) {
+      var script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://www.googletagmanager.com/gtag/js?id=G-4JXPHEBMTY';
+      document.head.appendChild(script);
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-4JXPHEBMTY');
+    }
+  </script>
+  {% endif %}
+</head>
+<body>
+  <div id="scalene-app" aria-busy="true"><p class="boot-note">Loading profile&hellip;</p></div>
+  <noscript>Scalene needs JavaScript to display this profile.</noscript>
+  <footer id="scalene-footer" data-version="{{ scalene_version }}" data-date="{{ scalene_date }}">
+    <a href="https://github.com/plasma-umass/scalene">Scalene</a> version {{ scalene_version }}, {{ scalene_date }}
+  </footer>
+  <script>
+    const profile = {{ ((profile or '') | trim or '""') | replace('<', '\\u003c') }};
+    function clickToLoadFile() { var i = document.getElementById("fileinput"); if (i) { i.click(); } }
+  </script>
+  {% if standalone %}
+  <script>{{ gui_js }}</script>
+  {% else %}
+  <script src="scalene-gui-bundle.js"></script>
+  {% endif %}
+  <script>
+    (function () {
+      function go() { load(profile); }
+      if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", go); } else { go(); }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Scalene</title>
+<script>
+/* theme boot (before first paint): stored choice, else the OS preference */
+(function () { var s = null; try { s = localStorage.getItem("scalene-theme"); } catch (e) {}
+  var t = s || (window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  document.documentElement.setAttribute("data-theme", t); })();
+window.SCALENE_VERSION = "2.4.0"; window.SCALENE_DATE = "2026.10.28";
+</script>
+<style>
+/*__CSS__*/
+.hs-cols { display: grid; grid-template-columns: var(--hs-cols); gap: 0 14px; padding: 0 20px 6px; }
+.hs-cols span:last-child { justify-self: end; }
+@media (max-width: 720px) { .hs-cols { display: none; } }
+</style>
+</head>
+<body>
+<a class="sr-only" href="#app">Skip to report</a>
+<header class="topbar"></header>
+<main id="app" tabindex="-1"></main>
+<footer class="foot"></footer>
+<div class="tip" id="tip" role="tooltip"></div>
+<div class="drop" id="drop" aria-hidden="true">Drop a Scalene profile (.json) to open it</div>
+<input type="file" id="fileinput" accept=".json,application/json" hidden>
+<script id="profile-data" type="application/json">/*__DATA__*/</script>
+<script>
+(function () {
+"use strict";
+/*__JS__*/
+})();
+</script>
+</body>
+</html>

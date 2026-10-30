@@ -1,0 +1,605 @@
+/* 20-overview.css — Overview section (DESIGN.md §2.3–2.4, §4.2–4.6). Tokens only; data marks
+   live on cards (§3.7). Layout modes come from views/overview/overview.ts:
+   .ov[data-layout="side" | "stack" | "phone"], .is-short, .is-xxl, .has-findings. */
+
+.ov { display: flex; flex-direction: column; gap: var(--col-gap); min-width: 0; }
+.ov > [hidden] { display: none !important; }
+
+/* ── Hero card: headline + meta | readouts ─────────────────────────────── */
+.ov-hero { position: relative; overflow: hidden; }
+.ov-hero::before { /* faint neutral sheen in dark only (--glow is 0 in light) */
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: var(--glow);
+  background: radial-gradient(1100px 260px at 24% -40%, color-mix(in srgb, var(--fg) 5%, transparent), transparent 72%);
+}
+.ov-head { position: relative; padding: var(--card-pad-y) var(--card-pad-x) 16px; min-width: 0; }
+.headline {
+  font: var(--type-headline);
+  letter-spacing: -0.011em;
+  color: var(--fg-2);
+  max-width: 1320px;
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+.headline strong { color: var(--fg); font-weight: 600; }
+.headline .chip-code { font-size: 0.86em; line-height: 1.35; padding: 0 6px; color: var(--fg); vertical-align: 0.06em; }
+.seg-ref {
+  color: var(--fg-3);
+  text-decoration: underline dotted 1px;
+  text-underline-offset: 3px;
+  border-radius: var(--r-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.seg-ref:hover { color: var(--fg); text-decoration-style: solid; }
+.headline .seg-ref { font-family: var(--font-mono); font-variant-ligatures: none; font-size: 0.86em; }
+.chip-code:focus-visible, .seg-ref:focus-visible { outline-offset: 1px; }
+.seg-glue { white-space: nowrap; }
+/* "(asyncio.run(…))": a chip glued to punctuation sits tight against it (the generator emits no
+   space; the chip's own padding read as one), consistent with refs like "(infer_bert.py:66)". */
+.headline .seg-glue > .chip-code { padding-inline: 4px; margin-inline: -1px; }
+
+.meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px;
+  margin-top: 6px;
+  font-size: 12.5px; line-height: 18px; color: var(--fg-2);
+  font-variant-numeric: tabular-nums;
+}
+.meta-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--fg-3); flex: none; }
+.meta-more { color: var(--fg-2); text-decoration: underline dotted 1px; text-underline-offset: 3px; border-radius: var(--r-xs); }
+.meta-more:hover { color: var(--fg); }
+
+/* ── Readouts (KPI tiles) ───────────────────────────────────────────────── */
+.ov-readouts {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--ro-cols, minmax(0, 1fr));
+  grid-auto-rows: auto;
+  border-top: 1px solid var(--line);
+}
+.ro-tile {
+  display: grid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+  align-content: start;
+  min-width: 0;
+  /* 16 px vertical (§4.3.2); horizontal = card padding so tile 1 aligns with the headline. */
+  padding: 16px var(--card-pad-x) 18px;
+}
+.ro-tile + .ro-tile { border-left: 1px solid var(--line); }
+.ro-tile > .ro-short { display: none; }
+.ro-label { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
+.ro-label-text { overflow: hidden; text-overflow: ellipsis; }
+.ro-label-short { display: none; }
+/* A label that does not fit (200 % zoom, narrow tiles) switches to its short form (readouts.ts
+   measures it), never an ellipsis. The full label stays in the accessibility tree (visually
+   hidden) and in the tooltip. */
+.ro-label-text.use-short .ro-label-full { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ro-label-text.use-short .ro-label-short { display: inline; }
+.ro-tile { container-type: inline-size; container-name: rotile; }
+.ro-sk { display: none; }
+.led {
+  flex: none; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--c, var(--fg-3));
+  box-shadow: 0 0 calc(var(--glow) * 6px) var(--c, transparent);
+}
+.ro-value {
+  margin-top: 8px;
+  font: var(--type-readout);
+  letter-spacing: var(--ls-readout);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  align-self: start;
+}
+.ro-value.is-danger { color: var(--danger); }
+.ro-unit { font: var(--type-readout-unit); letter-spacing: 0; color: var(--fg-2); margin-left: 3px; }
+.ro-split { display: flex; flex-wrap: wrap; gap: 4px 28px; margin-top: 8px; min-width: 0; }
+.ro-sv { display: flex; flex-direction: column; min-width: 0; }
+.ro-sv .ro-value { margin-top: 0; }
+.ro-sv .ro-unit { margin-left: 1px; }
+.ro-sl { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; line-height: 16px; color: var(--fg-2); white-space: nowrap; }
+.sw { flex: none; display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: var(--mem-py); }
+.sw-sys {
+  background-color: var(--cpu-sys);
+  background-image: repeating-linear-gradient(45deg, transparent 0 2.2px, color-mix(in srgb, var(--surface) 55%, transparent) 2.2px 2.83px);
+}
+.ro-visual { margin-top: 12px; min-width: 0; align-self: start; }
+.ro-tile.no-visual .ro-visual { height: 0; margin-top: 0; }
+.ro-bar {
+  position: relative;
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--r-xs);
+  background: var(--sunken);
+}
+.ro-bar.is-neutral { height: 8px; }
+.ro-bar-grad {
+  background:
+    linear-gradient(90deg, transparent calc(25% - 0.5px), var(--grid-strong) calc(25% - 0.5px) calc(25% + 0.5px), transparent calc(25% + 0.5px) calc(50% - 0.5px), var(--grid-strong) calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px) calc(75% - 0.5px), var(--grid-strong) calc(75% - 0.5px) calc(75% + 0.5px), transparent calc(75% + 0.5px)),
+    var(--sunken);
+}
+.ro-fill { display: flex; gap: 1px; height: 100%; transform-origin: left center; }
+.ro-seg { display: block; height: 100%; min-width: 2px; flex-basis: 0; }
+.ro-seg.is-hatch-sys, .hs-seg.is-hatch-sys {
+  background-color: var(--cpu-sys);
+  background-image: repeating-linear-gradient(45deg, transparent 0 2.2px, color-mix(in srgb, var(--surface) 55%, transparent) 2.2px 2.83px);
+}
+.ro-fill > .ro-seg + .ro-seg { box-shadow: -1px 0 0 var(--surface); }
+.ro-meters { display: flex; flex-direction: column; gap: 2px; }
+/* Captions fit by phrase (views/overview/caption.ts): rows per breakpoint in --ro-cap-lines.
+   lg+ gives three rows (tile heights are equal through the subgrid anyway), so the method and
+   location phrases are not traded for the compact iframe phrase at the 1440 reference. */
+.ro-tile { --ro-cap-lines: 2; }
+@media (min-width: 1280px) { .ro-tile { --ro-cap-lines: 3; } }
+.ro-cap {
+  margin-top: 8px;
+  font: var(--type-caption);
+  color: var(--fg-2);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.ro-cap-line { display: block; }
+.ro-ph { display: inline-block; max-width: 100%; vertical-align: top; }
+.ro-cap-line[hidden], .ro-ph[hidden], .ro-sep[hidden] { display: none; }
+.ro-cap strong { color: var(--fg); font-weight: 600; }
+.ro-cap .chip-code { font-size: 11.5px; line-height: 14px; padding: 0 5px; }
+.ro-ref { color: var(--fg-2); font-family: var(--font-mono); font-variant-ligatures: none; font-size: 11.5px; text-decoration: underline dotted 1px; text-underline-offset: 3px; }
+.ro-ref:hover { color: var(--fg); }
+.ro-cap .ro-ref, .ro-cap .chip-code { vertical-align: 0; }
+/* The leak list has no micro-visual: it starts right under the value (rows 3–4 of the subgrid). */
+.ro-tile[data-kind="leaks"] > .ro-visual { display: none; }
+.ro-leaks { grid-row: span 2; margin-top: 7px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.ro-leak {
+  display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0 6px;
+  min-height: 24px; max-width: 100%;
+  padding: 2px 6px 2px 4px; margin-left: -4px;
+  border-radius: var(--r-sm);
+  font-size: 12px; line-height: 16px; color: var(--fg-2);
+  text-align: left;
+}
+.ro-leak svg { color: var(--danger); }
+.ro-leak:hover { background: var(--hover); color: var(--fg); }
+.ro-leak-loc { color: var(--fg); white-space: nowrap; font-size: 12px; }
+.ro-leak-rate { font-variant-numeric: tabular-nums; color: var(--fg-2); white-space: nowrap; }
+.ro-more { font-family: var(--font-ui); font-size: 12px; min-height: 24px; }
+/* md (four narrow tiles, one caption row): one line per leak. When the rate does not fit beside
+   the location it stays in the button's tooltip and accessible name. Phones keep two lines. */
+.ro-leaks { container-type: inline-size; container-name: leaks; width: 100%; }
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  @container leaks (max-width: 190px) {
+    .ro-leak { flex-wrap: nowrap; }
+    .ro-leak-rate { display: none; }
+  }
+}
+
+/* ── Instrument card: scope | hotspots ─────────────────────────────────── */
+.ov-inst { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.ov[data-layout="side"] .ov-inst { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+.ov[data-layout="side"] .ov-inst.no-scope { grid-template-columns: minmax(0, 1fr); }
+.ov[data-layout="side"] .ov-inst > .ov-scope { border-right: 1px solid var(--line); }
+.ov[data-layout="stack"] .ov-inst > .ov-hot { border-top: 1px solid var(--line); }
+.ov[data-layout="stack"] .ov-inst.no-scope > .ov-hot { border-top: 0; }
+
+/* Scope pane */
+.ov-scope { display: flex; flex-direction: column; min-width: 0; padding: var(--card-pad-y) var(--card-pad-x) 12px; }
+.scope-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-height: 28px; margin-bottom: 6px; min-width: 0; }
+.scope-title { flex: none; }
+.scope-info { flex: none; color: var(--fg-3); margin: 0 -4px 0 -6px; }
+.scope-desc {
+  flex: 1 1 160px; min-width: 0;
+  font-size: 12.5px; line-height: 18px; color: var(--fg-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+.scope-desc.has-chip { overflow: visible; }
+.link-loc { font-size: 12px; color: var(--fg); padding: 1px 5px; border-radius: var(--r-xs); background: var(--sunken); border: 1px solid var(--line); }
+.range-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 28px; padding: 0 2px 0 10px;
+  border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+  background: var(--raised);
+  font-size: 12.5px; color: var(--fg); white-space: nowrap;
+}
+.range-text { font-variant-numeric: tabular-nums; margin-right: 4px; }
+.range-open { height: 24px; padding: 0 8px; }
+.scope-head.is-busy .scope-legend { display: none; }
+.scope-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 2px 12px; margin-left: auto; font-size: 12px; line-height: 16px; color: var(--fg-2); }
+.lg-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.sw-busy { background: color-mix(in srgb, var(--cpu-native) 45%, transparent); box-shadow: inset 0 1.25px 0 var(--cpu-py); }
+.sw-gil { background: color-mix(in srgb, var(--gil) 70%, transparent); }
+.sw-wait {
+  background-color: color-mix(in srgb, var(--async) 35%, transparent);
+  background-image: repeating-linear-gradient(135deg, var(--async) 0 1px, transparent 1px 3.54px);
+}
+.sw-phase { background: var(--sunken); box-shadow: inset 0 0 0 1px var(--control); }
+/* Same mark as the canvas cells: 1 px --control lines on a 4 px period (≥ 3:1 on the card). */
+.sw-phase-short {
+  background-color: var(--surface);
+  background-image: repeating-linear-gradient(135deg, var(--control) 0 0.71px, transparent 0.71px 2.83px);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.scope-fig { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; margin: 0; }
+.scope-canvas { position: relative; width: 100%; flex: 1 1 auto; cursor: crosshair; }
+.scope-canvas > .cv-overlay:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-xs); }
+
+/* Intro stage (scope-intro.ts, M4): compositor-only layers between the base and overlay canvases;
+   removed when the sweep ends (the static base render then holds the same pixels). */
+.scope-stage, .ss-win, .ss-glow, .ss-beam, .ss-head, .ss-chip, .ss-ping, .ss-callout { position: absolute; pointer-events: none; }
+.scope-stage { overflow: hidden; }
+.ss-win { left: 0; top: 0; overflow: hidden; }
+.ss-glow {
+  top: 0; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, rgb(0 0 0 / 0.35) 65%, #000);
+  mask-image: linear-gradient(90deg, transparent, rgb(0 0 0 / 0.35) 65%, #000);
+}
+/* No mix-blend-mode here: the dark bloom is pre-composited into the glow canvas (scope-intro.ts);
+   a blended layer dropped the sweep to 40–49 fps at 2560 px (review round 1). */
+.ss-beam { display: flex; }
+.ss-trail { flex: 0 0 48px; height: 100%; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cpu-py) 18%, transparent)); }
+.ss-line { flex: 0 0 1px; height: 100%; background: color-mix(in srgb, var(--fg) 70%, transparent); box-shadow: 0 0 calc(var(--glow) * 10px) var(--cpu-py); }
+.ss-head { left: 0; top: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--mem-py); box-shadow: 0 0 calc(var(--glow) * 12px) var(--mem-py); }
+.ss-chip {
+  height: 16px; border-radius: var(--r-xs);
+  background: var(--fg); color: var(--surface);
+  font: 500 11px/16px var(--font-ui); font-variant-numeric: tabular-nums; text-align: center; white-space: nowrap;
+}
+.ss-ping { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--mem-py); box-shadow: 0 0 calc(var(--glow) * 10px) var(--mem-py); }
+
+/* Hover readout card (§4.4.8): glass, 0 ms in, 90 ms out. */
+.scope-card {
+  position: absolute; z-index: 3; left: 0; top: 0;
+  min-width: 220px; max-width: 320px;
+  padding: 10px 12px;
+  border: 1px solid var(--glass-line); border-radius: var(--r-md);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px) saturate(150%); backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: var(--shadow-float);
+  font-size: 12.5px; line-height: 18px; color: var(--fg-2);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-1) linear;
+}
+.scope-card.is-on { opacity: 1; transition: none; }
+.sc-time { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; font-size: 13px; font-weight: 600; color: var(--fg); font-variant-numeric: tabular-nums; }
+.sc-of { font-size: 12px; font-weight: 500; color: var(--fg-3); }
+.sc-row { display: flex; align-items: center; gap: 8px; min-width: 0; font-variant-numeric: tabular-nums; }
+.sc-row > span { flex: none; }
+.sc-row > b, .sc-row > .sc-code { margin-left: auto; min-width: 0; text-align: right; color: var(--fg); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-row > .sc-code { font-weight: 400; font-size: 12px; }
+.sc-stack { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); min-width: 0; }
+.sc-stack > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-stack code { font-size: 12px; color: var(--fg); }
+.sc-src { display: block; margin-top: 2px; color: var(--syn-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.sc-dim { color: var(--fg-3); }
+.sc-hint { margin-top: 6px; font-size: 12px; color: var(--fg-3); }
+/* Touch: the card is pinned by a tap and carries the explicit "Open" step. */
+.scope-card.is-touch { pointer-events: auto; }
+.sc-actions { margin-top: 8px; display: flex; }
+.sc-actions .sc-hint { margin-top: 0; }
+.sc-open { min-height: 32px; gap: 4px; padding: 0 8px 0 10px; font-family: var(--font-mono); font-variant-ligatures: none; font-size: 12px; }
+
+/* Hotspots pane */
+.ov-hot { display: flex; flex-direction: column; min-width: 0; padding: var(--card-pad-y) 12px 12px; }
+.hs-head { padding: 0 8px; min-width: 0; }
+.hs-head-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-height: 28px; }
+.hs-title { margin-right: auto; }
+.hs-unit { display: none; font-size: 12px; line-height: 16px; color: var(--fg-2); white-space: nowrap; }
+.hs-controls { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.hs-selects { display: none; gap: 8px; min-width: 0; }
+.hs-sub { margin-top: 4px; font-size: 12.5px; line-height: 18px; color: var(--fg-2); }
+.hs-list { position: relative; margin-top: 8px; min-width: 0; }
+/* Expanded in place (25 / 50 / all): side by side the list keeps the card height and scrolls. */
+.ov[data-layout="side"] .hs-list.is-expanded { max-height: var(--hs-list-max, 300px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.hs-list { --hs-sec: 48px; }
+/* The secondary column fits its whole value per metric, never cut mid-token (§1.3.5). */
+.hs-list[data-metric="memory"] { --hs-sec: 92px; }
+.hs-list[data-metric="await"] { --hs-sec: 64px; }
+.hs-row {
+  --hs-meter: 72px;
+  position: relative;
+  display: grid;
+  /* Code keeps ≥ 140 px (§4.5.2); the location yields first. */
+  grid-template-columns: 20px var(--hs-meter) 56px var(--hs-sec) minmax(140px, 1fr) minmax(0, auto);
+  column-gap: 8px;
+  align-items: center;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  min-width: 0;
+}
+.hs-row:hover, .hs-row.is-linked { background: var(--hover); }
+.hs-row.is-linked { box-shadow: inset 2px 0 0 var(--fg-3); }
+.hs-row.is-selected, .hs-row.is-acted { background: var(--select); box-shadow: inset 2px 0 0 var(--select-bar); }
+.hs-row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+/* M8: leaving clones sit under everything; moving rows slide on an opaque surface above. */
+.hs-ghost { position: absolute; left: 0; right: 0; z-index: 0; pointer-events: none; }
+.hs-row.is-moving { z-index: 2; background-color: var(--surface); }
+.hs-rank { font: 400 12px/16px var(--font-mono); color: var(--fg-3); text-align: right; }
+.hs-meter {
+  position: relative; display: block; height: 10px; overflow: hidden;
+  border-radius: var(--r-xs);
+  background:
+    linear-gradient(90deg, transparent calc(25% - 0.5px), var(--grid-strong) calc(25% - 0.5px) calc(25% + 0.5px), transparent calc(25% + 0.5px) calc(50% - 0.5px), var(--grid-strong) calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px) calc(75% - 0.5px), var(--grid-strong) calc(75% - 0.5px) calc(75% + 0.5px), transparent calc(75% + 0.5px)),
+    var(--sunken);
+}
+.hs-fill { display: flex; height: 100%; transform-origin: left center; }
+.hs-seg { display: block; height: 100%; flex-basis: 0; min-width: 1px; }
+.hs-seg.is-hatch-wait {
+  background-color: color-mix(in srgb, var(--async) 35%, transparent);
+  background-image: repeating-linear-gradient(135deg, var(--async) 0 1px, transparent 1px 3.54px);
+}
+.hs-val { font: 600 13px/16px var(--font-ui); color: var(--fg); text-align: right; white-space: nowrap; }
+.hs-sec { font-size: 12px; line-height: 16px; color: var(--fg-3); text-align: right; white-space: nowrap; overflow: hidden; }
+.hs-codewrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hs-code {
+  flex: 1 1 auto; min-width: 0;
+  font-size: 13px; line-height: 20px; color: var(--syn-text);
+  white-space: pre; overflow: hidden;
+}
+.hs-code.is-clipped { -webkit-mask-image: linear-gradient(90deg, var(--fg) calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, var(--fg) calc(100% - 24px), transparent); }
+.hs-file { display: flex; align-items: baseline; gap: 8px; font-family: var(--font-ui); white-space: nowrap; }
+.hs-base { flex: none; color: var(--fg); }
+.hs-dir { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; font-size: 12px; color: var(--fg-3); }
+.hs-dir bdi { direction: ltr; unicode-bidi: isolate; }
+.hs-badge { flex: none; }
+.hs-badge svg { margin-left: -1px; }
+/* Location is metadata, set in the UI face (narrower than mono), so the function fits beside
+   the file at the 1440 reference without starving the code column. */
+.hs-loc { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; max-width: 200px; font-family: var(--font-ui); font-size: 12px; line-height: 16px; color: var(--fg-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* "train() · train.py:173" (§4.5.2): the function yields first; the file name and line never
+   truncate (a cut basename hides which file the hotspot is in). */
+.hs-loc-fn { color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; min-width: 4ch; max-width: 12ch; flex: 0 1 auto; }
+@container hot (min-width: 760px) { .hs-loc-fn { max-width: 18ch; } }
+.hs-loc-sep { flex: none; }
+.hs-loc-file { flex: none; font-variant-numeric: tabular-nums; }
+.hs-loc-file bdi { unicode-bidi: isolate; }
+/* Hover / focus action: propose a fix with AI (same trigger as the code row's Optimize). */
+.hs-ai {
+  position: absolute; right: 6px; top: 50%; z-index: 1;
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 26px; padding: 0 8px;
+  transform: translateY(-50%);
+  border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+  background: var(--raised); color: var(--fg); box-shadow: var(--shadow-card);
+  font-size: 12px; white-space: nowrap;
+  opacity: 0; pointer-events: none;
+}
+.hs-row:hover .hs-ai, .hs-row:focus-visible .hs-ai { opacity: 1; pointer-events: auto; }
+.hs-ai:hover { border-color: var(--control); }
+.hs-ai[hidden], .fd-ai[hidden] { display: none; }
+@media (hover: none) { .hs-ai { display: none; } }
+.hs-empty { padding: 16px 8px; font-size: 13px; color: var(--fg-3); }
+.hs-showall { align-self: flex-start; margin: 4px 0 0 4px; }
+.hs-foot {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 8px 8px 0; padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px; line-height: 18px; color: var(--fg-2);
+  font-variant-numeric: tabular-nums;
+}
+.hs-foot strong { color: var(--fg); font-weight: 600; }
+.hs-cum { flex: 1 1 80px; max-width: 220px; height: 8px; border-radius: var(--r-xs); background: var(--sunken); overflow: hidden; }
+.hs-cum-fill { display: block; height: 100%; border-radius: var(--r-xs); }
+.hs-more { display: inline-flex; align-items: center; gap: 2px; min-height: 24px; margin-left: auto; padding: 0 2px 0 6px; border-radius: var(--r-sm); color: var(--fg-2); white-space: nowrap; }
+.hs-more:hover { color: var(--fg); background: var(--hover); }
+/* Secondary badges need room; leak and event-loop badges always show (must-fix 28). */
+.ov-hot { container-type: inline-size; container-name: hot; }
+@container hot (max-width: 640px) {
+  .hs-badge[data-kind="gpu"], .hs-badge[data-kind="await"], .hs-badge[data-kind="copy"] { display: none; }
+}
+/* The enclosing function shows from 520 px (the 1440 reference pane is ≈ 550 px). */
+@container hot (max-width: 519px) {
+  .hs-loc-fn, .hs-loc-sep { display: none; }
+}
+/* "event loop · waiting" in full where the badge column exists (§4.5.2: 72 px at xl+); narrower
+   panes keep "waiting" so the code stays legible (the row's name and tooltip say "event loop"). */
+@container hot (max-width: 640px) { .hs-badge-long { display: none; } }
+@container hot (min-width: 760px) { .hs-row { --hs-meter: 96px; } }
+
+/* Syntax colours inside hotspot code (§4.0.5). */
+.ov-hot .t-kw { color: var(--syn-kw); font-weight: 600; }
+.ov-hot .t-def { color: var(--syn-text); font-weight: 600; }
+.ov-hot .t-bi, .ov-hot .t-dec { color: var(--syn-builtin); }
+.ov-hot .t-str { color: var(--syn-str); }
+.ov-hot .t-num { color: var(--syn-num); }
+.ov-hot .t-com { color: var(--syn-com); font-style: italic; }
+
+/* ── Findings ───────────────────────────────────────────────────────────── */
+.ov-findings { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.fd-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-height: 28px; padding: 0 2px; }
+.fd-sub { font-size: 12px; line-height: 16px; color: var(--fg-3); }
+.fd-more { margin-left: auto; }
+.fd-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--col-gap); min-width: 0; }
+/* 1–2 findings never leave empty grid columns (review round 1). */
+.fd-list[data-count="1"] { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.fd-list[data-count="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fd-text { max-width: 72ch; }
+.fd-note { display: flex; align-items: center; min-width: 0; padding: 12px 16px; border: 1px dashed var(--line-strong); border-radius: var(--r-lg); font-size: 12.5px; line-height: 18px; color: var(--fg-3); }
+.fd-note[hidden] { display: none; }
+.fd-item { display: flex; min-width: 0; }
+.fd-item[hidden] { display: none; }
+.fd-card {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px;
+  width: 100%; min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--surface); box-shadow: var(--shadow-card);
+  transition: border-color var(--dur-1) linear;
+}
+.fd-card.is-linked-card { cursor: pointer; }
+.fd-card.is-linked-card:hover { border-color: var(--line-strong); }
+.fd-icon {
+  display: grid; place-items: center; width: 28px; height: 28px;
+  border-radius: var(--r-sm);
+  color: var(--c);
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+.fd-body { min-width: 0; }
+.fd-title { font: var(--type-body-strong); color: var(--fg); }
+.fd-text { margin-top: 2px; font-size: 13px; line-height: 20px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.fd-text strong { color: var(--fg); font-weight: 600; }
+.fd-text .chip-code { font-size: 12px; line-height: 18px; padding: 0 5px; }
+.fd-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; }
+.fd-ref { display: inline-flex; align-items: center; gap: 2px; min-height: 24px; margin-left: -4px; padding: 0 2px 0 4px; border-radius: var(--r-sm); font-size: 12.5px; color: var(--fg-3); }
+.fd-ai { gap: 4px; color: var(--fg-2); }
+.fd-ai:hover { color: var(--fg); }
+.fd-ref .mono { font-size: 12px; }
+.fd-ref:hover { color: var(--fg); background: var(--hover); }
+/* Coarse pointers (§6.2.7): a 32 px hit area without moving the text (review round 1). */
+@media (pointer: coarse) {
+  .hs-more, .fd-ref { position: relative; }
+  .hs-more::after, .fd-ref::after { content: ""; position: absolute; inset: -4px 0; }
+}
+
+/* ── Phone order cards (xs, §2.4.5) ────────────────────────────────────── */
+.ov-hotcard > .ov-hot { padding: 12px 8px 8px; }
+.ov-scopecard > .ov-scope { padding: 12px 16px 8px; }
+.ov-readcard > .ov-readouts-rest { border-top: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ov-readouts-rest .ro-tile { border-left: 0; padding: 12px 16px 14px; }
+.ov-readouts-rest .ro-tile:nth-child(even) { border-left: 1px solid var(--line); }
+.ov-readouts-rest .ro-tile:nth-child(n + 3) { border-top: 1px solid var(--line); }
+/* An odd count leaves the last tile alone on its row: it takes the full width. */
+.ov-readouts-rest .ro-tile:last-child:nth-child(odd) { grid-column: 1 / -1; border-left: 0; }
+.ro-extra { display: none; }
+.ov-readouts-rest .ro-extra { display: grid; }
+
+/* ── Breakpoints ────────────────────────────────────────────────────────── */
+@media (min-width: 1600px) {
+  .hs-row { --hs-meter: 96px; }
+}
+@media (min-width: 2200px) {
+  .ro-tile { padding: 20px var(--card-pad-x) 22px; }
+  .ov.is-xxl .ov-hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: stretch; }
+  .ov.is-xxl .ov-head { display: flex; flex-direction: column; justify-content: center; padding: 24px; }
+  .ov.is-xxl .ov-hero > .ov-readouts { border-top: 0; border-left: 1px solid var(--line); }
+  /* §2.3 xxl: instrument ≈ 440 tall; it and the findings column share one bottom edge. */
+  .ov.is-xxl.has-findings { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); align-items: stretch; }
+  .ov.is-xxl .ov-inst { min-height: 440px; }
+  .ov.is-xxl .hs-foot { margin-top: auto; }
+  /* The rows take the card's spare height (36–44 px each) instead of leaving a band above the
+     footer; the hotspot column gets 2 / 5 of the instrument so the code is readable. */
+  .ov.is-xxl .hs-list:not(.is-expanded) { flex: 1 1 auto; display: flex; flex-direction: column; }
+  .ov.is-xxl .hs-list:not(.is-expanded) > .hs-row { flex: 1 1 36px; height: auto; min-height: 36px; max-height: 44px; }
+  .ov.is-xxl.has-findings > .ov-hero { grid-column: 1 / -1; }
+  .ov.is-xxl.has-findings > .ov-inst { grid-column: span 10; }
+  .ov.is-xxl.has-findings > .ov-findings { grid-column: span 2; }
+  .ov.is-xxl.has-findings .ov-inst { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  .ov.is-xxl .fd-list, .ov.is-xxl .fd-list[data-count] { grid-template-columns: minmax(0, 1fr); }
+  .ov.is-xxl .ov-findings { gap: 12px; }
+}
+@media (max-width: 1279.98px) {
+  .fd-list, .fd-list[data-count="1"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  /* md: four narrow tiles in one row, one caption line each (§2.3 md). */
+  .ro-tile { --ro-cap-lines: 1; }
+}
+@media (max-width: 1023.98px) {
+  /* sm: readouts 2 × 2 (time split spans the first row); two-line hotspot rows. */
+  .ov-hero > .ov-readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ov-hero > .ov-readouts .ro-tile { border-left: 0; }
+  .ov-hero > .ov-readouts .ro-tile:first-child { grid-column: 1 / -1; }
+  .ov-hero > .ov-readouts .ro-tile:not(:first-child) { border-top: 1px solid var(--line); }
+  .ov-hero > .ov-readouts .ro-tile:nth-child(2n + 3) { border-left: 1px solid var(--line); }
+  .ov-hero > .ov-readouts[data-n="2"] .ro-tile:last-child,
+  .ov-hero > .ov-readouts[data-n="4"] .ro-tile:last-child { grid-column: 1 / -1; }
+  .ro-tile { padding: 14px var(--card-pad-x) 16px; }
+  .hs-row {
+    grid-template-columns: 20px minmax(96px, 1fr) auto;
+    grid-template-areas: "rank meter val" "rank code loc";
+    grid-template-rows: 20px 20px;
+    row-gap: 4px;
+    height: 56px;
+  }
+  .hs-rank { grid-area: rank; align-self: start; padding-top: 2px; }
+  .hs-meter { grid-area: meter; }
+  .hs-val { grid-area: val; min-width: 52px; }
+  .hs-sec { display: none; }
+  .hs-codewrap { grid-area: code; }
+  .hs-loc { grid-area: loc; }
+  .hs-loc-fn, .hs-loc-sep { display: none; }
+  .hs-code { font-size: 12.5px; }
+}
+@media (max-width: 599.98px) {
+  .ov-head { padding: 14px 16px 14px; }
+  .headline .chip-code { padding: 0 4px; }
+  .fd-list, .fd-list[data-count] { grid-template-columns: minmax(0, 1fr); }
+  .fd-card { padding: 14px; }
+  .ov[data-layout="phone"] .hs-controls { display: none; }
+  .ov[data-layout="phone"] .hs-selects { display: flex; }
+  .ov[data-layout="phone"] .hs-title { flex: 1 0 100%; }
+  .ov[data-layout="phone"] .hs-selects .select { flex: 1 1 0; }
+  .ov[data-layout="phone"] .hs-selects .select-box, .ov[data-layout="phone"] .hs-selects .select-input { width: 100%; }
+  .ov-hero > .ov-readouts .ro-tile:first-child { padding: 12px 16px 14px; }
+  .scope-legend { margin-left: 0; justify-content: flex-start; flex-basis: 100%; }
+  .scope-card { min-width: 200px; max-width: min(300px, calc(100% - 8px)); }
+}
+
+/* Short hosts (Jupyter 1000 × 400): the whole answer in 400 px (§2.3 short, §4.3.5). */
+.ov.is-short { gap: 12px; }
+.ov.is-short .ov-head { padding: 7px 16px 7px; }
+.ov.is-short .meta { display: none; }
+.ov.is-short .headline { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.ov.is-short .ov-hero > .ov-readouts { grid-template-columns: var(--ro-cols); }
+.ov.is-short .ro-tile { display: flex; flex-direction: column; position: relative; grid-row: auto; padding: 7px 16px 8px; }
+.ov.is-short .ov-hero > .ov-readouts .ro-tile { grid-column: auto; border-top: 0; border-left: 0; }
+.ov.is-short .ov-hero > .ov-readouts .ro-tile + .ro-tile { border-left: 1px solid var(--line); }
+.ov.is-short .ro-value { margin-top: 1px; }
+.ov.is-short .ro-split { margin-top: 1px; gap: 0 14px; }
+.ov.is-short .ro-sl { display: none; }
+/* "Py 11.6%  native 61.9%  sys 26.1%": the key stays in short hosts (never colour alone). */
+.ov.is-short .ro-split { flex-wrap: wrap; gap: 0 10px; }
+.ov.is-short .ro-sv { display: block; white-space: nowrap; min-width: 0; }
+.ov.is-short .ro-sv .ro-value { display: inline; font-size: 17px; line-height: 22px; }
+.ov.is-short .ro-sk { display: inline; margin-right: 4px; font-size: 11px; line-height: 14px; color: var(--fg-2); white-space: nowrap; }
+.ov.is-short .ro-sk .sw { width: 6px; height: 6px; margin-right: 3px; vertical-align: 1px; }
+.ov.is-short .ro-tile > .ro-cap, .ov.is-short .ro-tile > .ro-leaks { display: none; }
+.ov.is-short .ro-tile > .ro-short { display: block; margin-top: 1px; font-size: 11px; line-height: 14px; color: var(--fg-2); overflow: hidden; }
+/* Wide tiles: one line. Narrow tiles (200 % zoom): up to two lines, no mid-phrase ellipsis. */
+@container rotile (min-width: 169px) { .ov.is-short .ro-tile > .ro-short { white-space: nowrap; text-overflow: ellipsis; } }
+@container rotile (max-width: 168px) { .ov.is-short .ro-tile > .ro-short { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; } }
+.ov.is-short .ro-visual { display: none; }
+/* The time split keeps its bar: a 4 px composition line along the tile's foot. */
+.ov.is-short .ro-tile[data-kind="time"] .ro-visual { display: block; position: absolute; left: 16px; right: 16px; bottom: 5px; margin: 0; }
+.ov.is-short .ro-tile[data-kind="time"] { padding-bottom: 13px; }
+.ov.is-short .ro-tile[data-kind="time"] .ro-bar { height: 4px !important; }
+.ov.is-short .ov-scope { padding: 8px 12px 6px 16px; }
+.ov.is-short .scope-head { min-height: 24px; margin-bottom: 2px; }
+.ov.is-short .scope-desc, .ov.is-short .scope-info { display: none; }
+.ov.is-short .scope-desc.has-chip { display: block; flex: 0 1 auto; }
+.ov.is-short .range-chip { height: 24px; }
+.ov.is-short .range-open { height: 20px; }
+.ov.is-short .hs-foot { display: none; }
+.ov.is-short .ov-hot { padding: 8px 8px 8px; }
+.ov.is-short .hs-head-row { min-height: 28px; flex-wrap: nowrap; }
+.ov.is-short .hs-controls { display: none; }
+.ov.is-short .hs-selects { display: flex; }
+.ov.is-short .hs-selects .select-input { height: 28px; font-size: 12.5px; }
+.ov.is-short .hs-sub { display: none; }
+.ov.is-short .hs-list { margin-top: 4px; }
+.ov.is-short .hs-row { height: 32px; grid-template-columns: 18px 56px 52px minmax(72px, 1fr) auto; grid-template-areas: none; grid-template-rows: none; row-gap: 0; }
+.ov.is-short .hs-row > * { grid-area: auto; }
+.ov.is-short .hs-sec, .ov.is-short .hs-loc-fn, .ov.is-short .hs-loc-sep { display: none; }
+/* 400 px hosts: the leak badge shrinks to its glyph (tooltip + name say "leak"); the event-loop
+   badge keeps the word "waiting" (must-fix 28: never presented as the hotspot without it). */
+.ov.is-short .hs-badge-text { display: none; }
+.ov.is-short .hs-badge[data-kind="loop"] .hs-badge-text { display: inline; }
+/* The event-loop row says what it is instead of a clipped "asy…" (the code is in its tooltip). */
+.ov.is-short .hs-codewrap:has(.hs-badge[data-kind="loop"]) .hs-code { display: none; }
+.ov.is-short .hs-badge[data-kind="loop"] .hs-badge-long { display: inline; }
+.ov.is-short .hs-badge[data-kind="loop"] .hs-badge-ev { display: none; }
+.ov.is-short .hs-badge { padding: 1px 4px; }
+/* The subtitle is hidden in short hosts: the denominator sits next to the title. */
+.ov.is-short .hs-unit { display: inline; margin-right: auto; }
+.ov.is-short .hs-title { margin-right: 0; }
+.ov.is-short .hs-rank { align-self: center; padding-top: 0; }
+.ov.is-short .hs-foot { margin-top: 4px; padding-top: 6px; }
+.ov.is-short .fd-list, .ov.is-short .fd-list[data-count] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ov.is-short .ov-findings { gap: 6px; }
+.ov.is-short .fd-card { padding: 12px; }
+.ov.is-short .fd-sub { display: none; }
+@media (max-width: 599.98px) { .scope-head.is-busy .scope-legend { display: flex; } }
+@media (max-width: 599.98px) { .scope-desc.has-chip { flex-basis: 100%; } }

@@ -1,0 +1,119 @@
+/* 04-layers.css — layer root: tooltip, toasts, popovers, scrim (DESIGN.md §4.18–4.19, §3.2 z-scale). */
+
+.layer-root { position: relative; z-index: var(--z-menu); }
+
+/* ── Tooltip (§4.19) ─────────────────────────────────────────────────────── */
+.tooltip {
+  position: fixed;
+  left: 0; top: 0;
+  z-index: var(--z-tooltip);
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 8px 10px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-md);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-float);
+  color: var(--fg);
+  font: var(--type-caption);
+  pointer-events: none;
+  opacity: 0;
+  translate: 0 2px;
+  transition: opacity var(--dur-1) linear, translate var(--dur-1) linear;
+}
+.tooltip.is-visible { opacity: 1; translate: 0 0; transition: opacity var(--dur-2) var(--ease-out), translate var(--dur-2) var(--ease-out); }
+:root.motion-reduce .tooltip { translate: none; }
+.tt-kind {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 0 6px;
+  border-radius: var(--r-xs);
+  background: var(--sunken);
+  font: var(--type-micro);
+  letter-spacing: var(--ls-micro);
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.tt-title { font-weight: 600; color: var(--fg); overflow-wrap: anywhere; }
+.tt-rows { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 16px; margin-top: 4px; }
+.tt-label { color: var(--fg-2); }
+.tt-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg); overflow-wrap: anywhere; }
+.tt-code {
+  margin-top: 6px;
+  padding: 4px 6px;
+  border-radius: var(--r-xs);
+  background: var(--sunken);
+  color: var(--syn-text);
+  font: var(--type-caption-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.tt-hint { margin-top: 6px; color: var(--fg-3); }
+
+/* ── Toasts (§4.18) ──────────────────────────────────────────────────────── */
+.toast-stack {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  width: min(380px, calc(100vw - 32px));
+  pointer-events: none;
+}
+@media (max-width: 599.98px) {
+  .toast-stack { right: 16px; left: 16px; width: auto; align-items: stretch; }
+}
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 8px 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--raised);
+  box-shadow: var(--shadow-float);
+  color: var(--fg);
+  font: var(--type-caption);
+  pointer-events: auto;
+  opacity: 0;
+  translate: 0 8px;
+  transition: opacity var(--dur-1) linear, translate var(--dur-1) linear;
+}
+.toast.is-visible { opacity: 1; translate: 0 0; transition: opacity var(--dur-2) var(--ease-out), translate var(--dur-2) var(--ease-out); }
+:root.motion-reduce .toast { translate: none; }
+.toast.is-collapsed { display: none; }
+.toast-icon { display: inline-flex; padding-top: 0; color: var(--fg-2); }
+.toast-error .toast-icon { color: var(--danger); }
+.toast-text { flex: 1; min-width: 0; padding-top: 0; overflow-wrap: anywhere; }
+.toast-action { margin: -4px 0; }
+.toast-close { margin: -4px 0; }
+
+/* ── Popover (program details, small non-modal panels) ───────────────────── */
+.popover {
+  position: fixed;
+  left: 0; top: 0;
+  z-index: var(--z-menu);
+  max-width: min(480px, calc(100vw - 16px));
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--raised);
+  box-shadow: var(--shadow-float);
+  color: var(--fg);
+  font: var(--type-caption);
+}
+.popover-rows { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; }
+.popover-rows dt { color: var(--fg-2); }
+.popover-rows dd { overflow-wrap: anywhere; }
+
+/* ── Scrim (drawer, sheets, palette) ─────────────────────────────────────── */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-scrim);
+  background: var(--scrim);
+  animation: fade-in var(--dur-3) linear;
+}

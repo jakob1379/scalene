@@ -1,0 +1,9 @@
+build/
+node_modules/
+fixtures/huge.json
+fixtures/ml-training.json
+fixtures/async-server.json
+design/**/*.html
+out/
+design/screens/
+!design/reference/src/shell.html

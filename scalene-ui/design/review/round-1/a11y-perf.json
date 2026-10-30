@@ -1,0 +1,210 @@
+[
+ {
+  "id": "code-sort-fold-focus-lost",
+  "severity": "major",
+  "area": "code",
+  "title": "Sorting a code column or opening a fold drops keyboard focus to <body>",
+  "evidence": "ml-training 1440x900 light ?still, keyboard only. Tab to a code-table header button ('Time (% of run): rank lines', 'Memory (peak)…', 'GPU…', 'Copy…', 'GPU mem…', 'Alloc…', 'Avg…') and press Enter: the sort applies and 'Ranked by Time, descending' is announced, but document.activeElement becomes BODY for all 7 sortable headers. Same for the first code-table tab stop, the fold row 'Folded: 15 lines without samples · 1–15': Enter (or Space) unfolds and focus goes to BODY; the next ArrowDown scrolls the page instead of moving in the table, and Tab restarts from wherever the browser's starting point is. Data: design/review/round-1/a11y-perf/data/focusloss-ml-training-1440.json (stops 37–44 'FOCUS LOST'), script design/review/round-1/a11y-perf/scripts/focusloss.cjs and fold.cjs. Cause: renderHead() rebuilds the header with headRow.replaceChildren(...) (src/views/code/codeview.ts:255–296) and the fold toggle re-renders/recycles the focused virtual row. Violates WCAG 2.4.3 and the §6.2.3 code-table keyboard map.",
+  "fix": "In renderHead(), before replaceChildren record `const col = (document.activeElement as HTMLElement)?.closest('.cv-h')?.dataset.col` and after it re-focus `headRow.querySelector(`.cv-h-${col} .cv-h-btn`)` with {preventScroll:true}. For folds, set the roving focus key to the first revealed line (key `L:<start>`) before re-rendering and call the existing focusRow/ensureVisible path after the virtual list updates. Add a guard in the code view: after any rerender, if the previously focused element was inside #code and activeElement is now <body>, focus the row for effectiveFocusKey(). Add an e2e check: Enter on each header button and on a fold keeps focus inside #code."
+ },
+ {
+  "id": "timeline-showall-focus-lost",
+  "severity": "major",
+  "area": "canvas",
+  "title": "Timeline '+ show all N levels' drops focus to <body>",
+  "evidence": "ml-training 1440x900, focus the '+ show all 19 levels' button (.tl-more) in the main lane and press Enter: the lane expands (button becomes '− show 16 levels') but document.activeElement is BODY (data/focusloss-ml-training-1440.json stop 57; scripts/verify2.cjs). The lane head buttons ('main', 'thread 1…') keep focus correctly, so only the more/less toggle loses it.",
+  "fix": "After re-rendering the lane heads, re-focus the replacement .tl-more for the same lane key (store the lane key before the rerender; query `[data-lane=key] .tl-more` afterwards) or update the existing button's text/aria-expanded in place instead of replacing it."
+ },
+ {
+  "id": "popup-tab-escapes-to-document-start",
+  "severity": "major",
+  "area": "shell-ai-core",
+  "title": "Tab inside the program popover, Sections/⋯ menus and the 'All files' list jumps to the top of the document",
+  "evidence": "#layer-root is appended to <body> after the template footer and scripts (body order: #scalene-app, noscript, footer#scalene-footer, script, script, div#layer-root, script). Keyboard: (a) 1440x900: focus the program button, Enter → focus moves into the 'Program details' dialog; Tab → focus lands on 'Skip to main content' and the popover closes. (b) 1440x900: 'All files' (code) → Enter focuses the first option; Tab → 'Skip to main content' (page jumps from scrollY 787 to the top). (c) 1024x768: 'Sections' menu → Tab → 'Skip to main content'. (d) 390x844: '⋯ More actions' (the only section nav on phones and in 1000x400 hosts) → Tab → 'Skip to main content'. In a real browser focus leaves the page for the browser chrome. Scripts design/review/round-1/a11y-perf/scripts/menus.cjs, xsmenu.cjs, verify2.cjs; screenshot design/review/round-1/a11y-perf/xs-more-menu.png. WCAG 2.4.3; APG menu-button pattern says Tab closes the menu and moves to the next control after the trigger.",
+  "fix": "In core/controls.ts menu() and the appbar program popover (views/appbar.ts:269–301) and the filenav 'All files' listbox: handle Tab/Shift+Tab while the popup is open — preventDefault, close the popup, focus the trigger, and (for Tab) then move to the trigger's next focusable via focusables(document.body) order; or keep the popup DOM-adjacent to its trigger. Never let sequential focus fall through #layer-root."
+ },
+ {
+  "id": "forced-colors-state-and-data-loss",
+  "severity": "major",
+  "area": "shell-ai-core",
+  "title": "Windows High Contrast (forced-colors) hides selected states, switch thumbs and every DOM data bar",
+  "evidence": "Chromium forcedColors:'active', ml-training 1440x900, both schemes: screenshots design/review/round-1/a11y-perf/forced-colors-dark-overview.png, forced-colors-light-code.png (+ -light-overview, -dark-code). Readout split bar, peak/GPU bars, hotspot meters, file-tab bars, code-table Time/Memory/GPU meters and legend swatches all disappear (background-color is forced to Canvas). Segmented controls lose their selected state: computed style of .seg-item aria-checked=true and =false is identical (bg transparent, border CanvasText, no outline) for Lines/Functions, Time/Memory/GPU, Profiled functions/Hot lines/All lines, Lanes/Interleaved, Peak…; the Wrap switch thumb vanishes; the app-bar current-section underline (::after background) is gone. There is no @media (forced-colors: active) rule anywhere in src/styles (grep). Canvases are unaffected.",
+  "fix": "Add a forced-colors block (e.g. in 03-controls.css + per-view files): `.seg-item[aria-checked=true],.tabs-item[aria-selected=true]{forced-color-adjust:none;background:Highlight;color:HighlightText}`; `.switch-thumb{background:ButtonText}` and `.switch[aria-checked=true] .switch-track{background:Highlight}`; `.appbar-nav-link[aria-current]::after{background:Highlight}` (or use a border); for data marks (.meter fills, readout bars, hotspot bars, legend swatches) either `forced-color-adjust:none` on the meter track+fill (they already pass 3:1 on --surface) or draw them with `background:CanvasText`/`Highlight` and a 1px border for the track. Add a Playwright forcedColors screenshot to the matrix."
+ },
+ {
+  "id": "touch-scope-tap-jumps",
+  "severity": "major",
+  "area": "overview",
+  "title": "On touch, the signal readout is unreachable: a tap on the scope immediately jumps ~6,400 px to the code view",
+  "evidence": "ml-training 390x844 isMobile/hasTouch: touchscreen.tap on the scope overlay at 30% width → scrollY 859 → 7309, focus on the code row 'train.py line 165', lens open; no readout card ever appears (none at +150 ms). The readout card (time, footprint, threads, phase, main thread + source) is pointer-hover only (§4.4.8), so phone/tablet users cannot inspect any time point, and an exploratory tap navigates away. Principle 8 ('Hover is never the only path … reachable by focus, tap'). Script design/review/round-1/a11y-perf/scripts/touch2.cjs, screenshot design/review/round-1/a11y-perf/touch-tap-scopecanvascvoverlay.png.",
+  "fix": "For pointerType 'touch' (or (pointer:coarse)): first tap places the cursor and shows the readout card anchored at the cursor (same as keyboard cursor), plus an explicit 'Open line' button inside the card; a second tap on the same x (or the button) runs nav.jumpTo. Dismiss on tap outside/scroll. Keep vertical pan native (touch-action:pan-y already set)."
+ },
+ {
+  "id": "touch-flame-timeline-no-details",
+  "severity": "major",
+  "area": "canvas",
+  "title": "On touch, flame and timeline frame details are unreachable: tap zooms (flame) or does nothing visible (timeline)",
+  "evidence": "ml-training 390x844 isMobile: tap a flame frame → immediate zoom (breadcrumb becomes 'All stacks › <module>:193 › train:165 › method_vectorcall… › …'), no tooltip with samples/%/file:line; tap a timeline segment → domain unchanged, no tooltip, nothing announced (polite empty). The frame/segment tooltips (kind, location, thread, time span, samples, source line) only open on mouse hover; there is no touch-specific handling in flame.ts/timeline.ts (grep pointerType → none). Script design/review/round-1/a11y-perf/scripts/touch2.cjs, screenshots design/review/round-1/a11y-perf/touch-tap-flamecanvas.png, touch-tap-tlcanvas.png. Principle 8.",
+  "fix": "On touch, first tap selects/highlights the frame or segment and shows its tooltip pinned (or a details strip under the toolbar) with 'Zoom' and 'Open line' buttons; a second tap on the same item zooms (flame) / opens (timeline). Mirror the keyboard focus path that already announces the item."
+ },
+ {
+  "id": "resize-relayouts-every-section",
+  "severity": "major",
+  "area": "shell-ai-core",
+  "title": "Window/panel resize relayouts and reallocates every canvas section, including off-screen ones, on every step (≈15 fps, 180–416 ms frames)",
+  "evidence": "?perf, all sections mounted, page at scrollY 0 (only the overview visible). Continuous drag 1440→1280 px in 8 px steps every 16 ms: ml-training frames p50 16.8 / p95 66.7 / max 183.5 ms, 8 long tasks 53–59 ms; huge p95 66.7 / max 416.5 ms. Breakpoint-crossing resizes (storm of 40 sizes 320–2560): 39 long tasks of 53–214 ms on ml-training (one over the 200 ms principle-9 limit). CPU profile of the 20-step drag (design/review/round-1/a11y-perf/data/resize-prof.json): scope relayout 164 ms, timeline relayout 141 ms, flame relayout 82 ms, code columns relayout 64 ms, memory chart 31 ms, canvas resize() 182 ms + setTransform 153 ms (backing-store reallocation). Headless software rendering inflates the canvas share, but the JS relayout of off-screen sections alone is ≈24 ms per step. Scripts design/review/round-1/a11y-perf/scripts/resize2.cjs, storm.cjs. Affects VS Code panel drags and window resizes.",
+  "fix": "In core/canvas.ts observeSize/resize: (1) skip relayout for hosts that are not intersecting the viewport — mark them dirty and relayout on IntersectionObserver entry; (2) while resize events keep arriving (<150 ms apart) keep the old backing store, let CSS stretch it, and reallocate + redraw once on a 120 ms trailing debounce (visible canvases first, one per rAF); (3) only rebuild code columns when the column set actually changes (breakpoint/width threshold), not on every px."
+ },
+ {
+  "id": "timeline-lane-heads-touch-target",
+  "severity": "major",
+  "area": "canvas",
+  "title": "Timeline lane heads and 'show all N levels' are 20 px tall and flush with the interactive canvas (fails WCAG 2.5.8)",
+  "evidence": "ml-training 390x844 isMobile (pointer:coarse=true): button.tl-lane-head 207x20 ('main 91.3% of samples') and 324x20 ×4 ('thread 1 2.5%' …), button.tl-more 117x20 ('+ show all 19 levels'); nearest other target is the timeline canvas at 0 px, so neither the 24×24 minimum nor the spacing exception holds. Same 20 px heights at 1440. DESIGN §6.2.7 requires ≥ 24 px everywhere and 32 px rows/buttons on coarse pointers. Data design/review/round-1/a11y-perf/data/targets-ml-training-390.json, screenshot design/review/round-1/a11y-perf/targets-timeline-390.png.",
+  "fix": "Give .tl-lane-head and .tl-more min-height 24 px (32 px under @media (pointer:coarse)), and reserve that height in the timeline layout (gutter/label row height in views/timeline/layout.ts) so the canvas rows start below the label hit area."
+ },
+ {
+  "id": "coarse-pointer-targets-24px",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "Coarse-pointer sizing (§6.2.7: 32 px rows/buttons, 36–44 px primary on xs) is not applied to segmented controls and link-buttons",
+  "evidence": "ml-training 390x844 isMobile, pointer:coarse: segmented radios (.seg-item: Lines/Profiled functions, Lanes/Interleaved, Peak, hotspot metric) 24 px tall; switch 'Wrap long lines'/'Reduce motion' 24 px; '100 more lines' (.hs-more) 82x24; 'Evidence: go to …' (.fd-ref) 24 px; footer actions 24 px; code sort buttons (.cv-h-btn) 28 px; 'About this chart' 24x24; code chips 20–23 px; app-bar logo 22x32. These pass WCAG 2.5.8's 24 px minimum (or its spacing exception) but not the spec's coarse-pointer sizes. Data design/review/round-1/a11y-perf/data/targets-ml-training-390.json, script design/review/round-1/a11y-perf/scripts/targets.cjs, targets2.cjs.",
+  "fix": "Add `@media (pointer: coarse)` overrides in 03-controls.css: .seg-item, .switch, .btn-sm/.hs-more/.fd-ref/.footer-action min-height 32 px; xs primary controls (segmented, file switcher, app-bar icons) 40 px; pad chips with an invisible ::before hit area to 24 px."
+ },
+ {
+  "id": "first-load-bad-text-blank",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "A first load of invalid JSON text leaves a blank page with aria-busy stuck on true",
+  "evidence": "Render the template with a string profile (e.g. `const profile = \"{ \\\"files\\\": \";` or `\"hello\"`) — the path taken by hosts that call load(text) first: main contains only the visually hidden 'Loading profile…', no empty state, #scalene-app keeps aria-busy=\"true\" forever, and the only content is a persistent error toast ('Couldn't load profile: Unexpected end of JSON input'). Screenshots design/review/round-1/a11y-perf/robust/string-top.png, design/review/round-1/a11y-perf/robust/first-load-bad-text.png; script design/review/round-1/a11y-perf/scripts/firstfail.cjs. Cause: load() returns from parse() failure before teardown/renderEmpty and before root.removeAttribute('aria-busy') (src/views/app.ts:518–528 and 588–620 (line 590 'if (!parsed.ok) return;')). §4.15 says a first load falls back to the empty state.",
+  "fix": "In load(): when parse fails and no model is loaded (`!model && !emptyHandle`), call teardown(); renderEmpty() (optionally with the error text inline in the empty state) and always clear aria-busy in a finally block."
+ },
+ {
+  "id": "elapsed-absent-shown-as-zero",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "Missing/zero/NaN/negative elapsed_time_sec is shown as a measured '0 s' everywhere",
+  "evidence": "Malformed variants of ml-training rendered through the template (design/review/round-1/a11y-perf/scripts/mkbad.py, robust.cjs; log design/review/round-1/a11y-perf/data/robust-bad.log): no-elapsed, zero-elapsed, NaN and negative all render 'train.py ran for 0 s. Two lines in train() account for 37.6% of the time', every hotspot shows '0 s', the finding reads '21.4% of run time (0 s)', and the signal card disappears although samples/timeline span 54 s. Screenshot design/review/round-1/a11y-perf/robust/no-elapsed-top.png. Principle 3 / must-fix 27 (absent ≠ measured 0). No crashes or console errors in any of the 23 malformed variants (NaN, Infinity, negatives, nulls, strings-for-numbers, bad stacks, bad linenos, unicode, non-object profiles) — robustness is otherwise good.",
+  "fix": "In model/normalize.ts treat a non-finite or ≤ 0 elapsed as absent: derive it from max(last memory sample t, last timeline t_sec + run) when available and mark it 'derived', otherwise set caps.elapsed=false so the headline says 'ran for an unrecorded time' and seconds columns/chips are hidden (percentages still shown)."
+ },
+ {
+  "id": "bidi-controls-in-paths-and-code",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "Bidi control characters in file names/source are not isolated: 'RTL-override.py:21' renders as '12:yp.edirrevo-LTR'",
+  "evidence": "Variant 'unicode' (basic.json with files named '/a/zero\\u200bwidth\\u202eRTL-override.py', CJK, Arabic, emoji, spaces, '<img onerror>' and a 300-char path): no errors and no HTML injection (text nodes only), but the U+202E in the path reverses the rest of the run in the headline chip, readouts, hotspot locations and file tabs, so line 21 reads as '12' ('zerowidth12:yp.edirrevo-LTR'). Source lines containing U+202E render reordered with no marker (the 'Trojan Source' pattern). Screenshot design/review/round-1/a11y-perf/robust/unicode-top.png.",
+  "fix": "Render every file/location/function label inside an isolate (`unicode-bidi: isolate` / <bdi>) and replace bidi controls (U+202A–U+202E, U+2066–U+2069) in paths with visible escapes; in the code view show bidi/zero-width controls as a visible badge (e.g. ⟨U+202E⟩) with a tooltip, like GitHub's hidden-Unicode warning."
+ },
+ {
+  "id": "template-footer-fouc-huge",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "On large profiles the first paint is the unstyled template footer for ~0.65 s",
+  "evidence": "huge.json 1440x900 dark, CDP screencast design/review/round-1/a11y-perf/film-load-huge-dark/: 52 ms — only 'Scalene version 2.4.0, 2026.10.23' as a default blue link at the top-left of a blank page (FCP 36–52 ms); 699 ms — app bar + empty main; 972 ms — overview. Navigation→DCL is 673–815 ms (parsing the 16 MB inline literal, one 337–419 ms task), then DCL→overview 213–240 ms (budget ≤ 1.0 s ✓). All §6.1 huge budgets pass (model 80–89 ms, no long task > 200 ms after overview, 1,761 nodes, 26 MB heap), so this is the only visible load issue.",
+  "fix": "In the template's inline <style>: hide the footer until the app owns it (`#scalene-footer:not(.site-footer){visibility:hidden}`) and put a static, styled placeholder inside #scalene-app (e.g. a centred 'Loading profile…' in the theme's --fg-3 with the page background) that main.ts replaces on boot."
+ },
+ {
+  "id": "budget-ml-theme-file-switch",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "ml-training theme toggle and file switch exceed the 60 ms budget",
+  "evidence": "?perf, 1440x900, click → next frame (rAF + task), 2–3 runs: theme toggle first click 61.8 and 69.3 ms (later toggles 35–56 ms; synchronous part 37–39 ms); code file switch transformer.py 47.8/53.4 ms, loader.py 39.5/56.6 ms, and 55/64/83 ms in the full perf run (budget < 60 ms on ml-training, §6.1). Timeline keyboard-zoom base draw max 11.4 ms (budget ≤ 10 ms; p95 4.6–6.3 ✓). Everything else is within budget: model 26–28 ms, DCL→overview 154–178 ms, no long task > 100 ms after overview, 1,455 nodes, 6.8 MB heap, hover handlers ≤ 4.8 ms, code scroll 60 fps, column sort 13–41 ms. Data design/review/round-1/a11y-perf/data/perf-ml-training-1440-perf.json, perf2-ml-training.json; scripts perf.cjs, perf2.cjs.",
+  "fix": "Theme toggle: repaint canvases with the cached geometry only (no relayout) and defer off-screen canvases to their next intersection; batch the token reads once (theme.tokens() memo) instead of per view. File switch: build the new file's items lazily for the visible window first, then complete in an idle slice."
+ },
+ {
+  "id": "hover-only-tooltips-code",
+  "severity": "minor",
+  "area": "code",
+  "title": "Column definitions for Footprint and Source are hover-only (headers have tabindex=-1)",
+  "evidence": "ml-training 1440: CDP getEventListeners finds 69 tooltip-bound elements, 41 not keyboard-focusable (design/review/round-1/a11y-perf/data/ttfocus-1440.json). In the code table the non-sortable headers div.cv-h-trend ('Footprint · when it allocated — Program footprint at each of the line's allocation / free events … Red = possible leak.') and div.cv-h-source ('Source code of the file. Hot lines carry a wash in the colour of the heat metric.') have tabindex=-1, so the only explanation of the sparkline colour/encoding is unreachable by keyboard and by touch (tooltips close on pointerdown). Principle 8.",
+  "fix": "Make every column header focusable (tabindex=0 on the header cell or a non-sorting button with the same tooltip), or add the definitions to the header's aria-description and to the ? shortcuts/legend dialog."
+ },
+ {
+  "id": "hover-only-tooltips-canvas",
+  "severity": "minor",
+  "area": "canvas",
+  "title": "Timeline class-row definitions and memory-stat exact values are hover-only",
+  "evidence": "ml-training 1440 (design/review/round-1/a11y-perf/data/ttfocus-1440.json, script tthover.cjs): div.tl-label-class (GC / I/O & waits / GIL: 'Share of all timeline samples whose stack is in this class') and dd.mem-stat-value ('max footprint · 3184.65 MiB = 3.11 GiB', ×6) open tooltips on hover only and are not focusable; touch users never see them.",
+  "fix": "Expose them through focusable wrappers (tabindex=0 + tooltip on focus) or put the definition in a visually hidden description (aria-describedby) and make tap toggle the tooltip on coarse pointers."
+ },
+ {
+  "id": "heading-order-overview",
+  "severity": "minor",
+  "area": "overview",
+  "title": "Heading outline starts with an h2 before the page's h1",
+  "evidence": "Every fixture (data design/review/round-1/a11y-perf/data/aria-all.log): document order is 'h2: Overview' (visually hidden, #overview-h, overview.ts:111) → 'h1: <headline>' → 'h3: Hotspots' → finding h3s → 'h2: Code' … So the h1 sits under an h2 and Hotspots skips a level. §6.2.1 asks for one h1 (the headline) and one h2 per section; screen-reader heading navigation reads 'Overview, heading level 2' first.",
+  "fix": "Put the visually hidden 'Overview' h2 after the h1 (or drop it and use aria-labelledby on the section pointing at the h1), and make 'Hotspots' and the Findings label h2/h3 consistently under it."
+ },
+ {
+  "id": "skip-to-code-not-focused",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "'Skip to code' scrolls but leaves focus on <body>",
+  "evidence": "ml-training and huge 1440x900: Tab, Tab, Enter on 'Skip to code' → the code section is scrolled under the bar (hash #code) but document.activeElement stays BODY (scripts kbd2.cjs, skipearly.cjs; screenshot design/review/round-1/a11y-perf/kbd/ml-training-light-skip-code.png). 'Skip to main content' does focus main#main. Chrome moves the sequential starting point so Tab continues inside Code, but screen readers' reading cursor and Safari do not follow an unfocused fragment target.",
+  "fix": "Handle the skip link click: preventDefault and call nav.showSection('code') (which already focuses #code-h with tabindex=-1), or give #code-h tabindex=-1 and point the href at it."
+ },
+ {
+  "id": "scope-enter-silent-noop",
+  "severity": "minor",
+  "area": "overview",
+  "title": "Scope: Enter at a time with no main-thread line does nothing and says nothing; ArrowUp/Down scroll the page",
+  "evidence": "ml-training 1440, focus the Run signal canvas, End (announces '54.1 seconds, 0.0 threads busy'), Enter → no jump, no announcement, focus unchanged (kbd2.cjs 'scope-enter-at-end'). ArrowDown ×2 on the focused role=application canvas scrolls the page by 80 px while the cursor stays.",
+  "fix": "When Enter finds no frame, announce politely 'No Python line at 54.1 s' (and maybe nudge to the nearest sampled time). preventDefault ArrowUp/ArrowDown inside the scope (or map them to previous/next channel)."
+ },
+ {
+  "id": "zoom-changes-not-announced",
+  "severity": "minor",
+  "area": "canvas",
+  "title": "Timeline and flame zoom changes are not announced",
+  "evidence": "ml-training 1440, timeline canvas focused: W/S, +/−, Shift+Enter (zoom to segment → domain 28.40–28.44 s), Alt+→ pan, 0 and Esc (reset) all change the domain but #sr-polite keeps the previous segment text; .tl-range has aria-live=off. Flame Enter (zoom into Block.forward) and Esc (zoom out) likewise announce nothing about the new root (kbd.cjs, keys2.cjs; data design/review/round-1/a11y-perf/data/kbd-ml-training-dark.json).",
+  "fix": "After a zoom/pan settles, announce politely (debounced 150 ms): timeline 'Showing 28.40 s to 28.44 s of 54.1 s'; flame 'Zoomed into Block.forward, 6.7% of samples' / 'Zoomed out to All stacks'."
+ },
+ {
+  "id": "hotspot-options-not-selected",
+  "severity": "minor",
+  "area": "overview",
+  "title": "Every hotspot option has aria-selected=false, including the focused one",
+  "evidence": "ml-training 1440: the Hotspots listbox options carry aria-selected=\"false\" (all 8) while roving focus moves with ↑/↓/j/k/Home/End (kbd.cjs 'hotspot-down2' sel=false). NVDA/JAWS announce 'not selected' on every row. The memory sites listbox does it right (selection follows focus, aria-selected=true).",
+  "fix": "Either omit aria-selected on hotspot options (single-select listbox with no persistent selection) or set aria-selected=true on the focused option (selection follows focus)."
+ },
+ {
+  "id": "dangling-aria-controls",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "aria-controls points at popups that do not exist until opened",
+  "evidence": "Every fixture (design/review/round-1/a11y-perf/data/aria-all.log): button.appbar-program aria-controls=program-4, Sections button aria-controls=menu-5, More button aria-controls=menu-6, flame 'Colour mode' button aria-controls=menu-d (menu-a on cpu-only) — none of those ids are in the DOM until the popup opens (invalid IDREF, flagged by axe aria-valid-attr-value).",
+  "fix": "Set aria-controls when the popup is created and remove it on close (or create the popup element hidden up front)."
+ },
+ {
+  "id": "code-path-empty-tab-stop",
+  "severity": "minor",
+  "area": "code",
+  "title": "The file path line in the code header is a focusable generic element with no action",
+  "evidence": "ml-training 1440 tab walk stop 35 (design/review/round-1/a11y-perf/data/tabwalk-ml-training-1440x900-light.json): span.code-path tabindex=0, no role, aria-label '/home/dev/llm-train/train.py. 58.8% of run · 31.8 s of 54.1 s', not scrollable (scrollWidth = clientWidth). It costs a Tab stop, does nothing on Enter, and aria-label on a generic role is not reliably announced (ARIA 1.2 prohibits naming generic).",
+  "fix": "Remove tabindex unless the path overflows (then keep it as a scrollable region with role=\"group\" or make it a button that opens the file switcher); move the summary into visible text or aria-describedby of the table."
+ },
+ {
+  "id": "zoom200-readout-truncation",
+  "severity": "minor",
+  "area": "overview",
+  "title": "At 200% browser zoom the readout labels are truncated",
+  "evidence": "1280x800 window at 200% (640x400 CSS px, DPR 2 → bp-sm short): 'PEAK MEM…', 'POSSIBLE L…' and 'mean while runn…' are cut with ellipsis (text-overflow, no tooltip); huge also truncates the file path and 'thread 10'. No horizontal page scroll (sw = cw = 640) and focus is never obscured by the 40 px sticky bar. Screenshot design/review/round-1/a11y-perf/zoom-ml-training-200pct-1280x800-top.png; script zoom.cjs.",
+  "fix": "In the short/sm readout layout let labels wrap to two lines (or use short labels 'Peak', 'Leaks', 'mean') instead of ellipsis; if truncation stays, attach the full text as a tooltip/aria-label per principle 7."
+ },
+ {
+  "id": "row-actions-cover-source-narrow",
+  "severity": "minor",
+  "area": "code",
+  "title": "On narrow code views the selected row's 'Optimize'/'⋯' buttons cover the source text",
+  "evidence": "ml-training at 200% zoom (640x400 CSS) after a hotspot jump: row 173 shows 'loss_value = [Optimize][⋯]' — the actions overlay the right part of the source cell, hiding most of the line (screenshot design/review/round-1/a11y-perf/zoom-ml-training-200pct-1280x800-jump.png). The same happens on any long line at 1440 when hovered/selected.",
+  "fix": "Below a source-cell width threshold, move row actions into the lens header (already has Open in editor / Show in stacks) or render them on a second line; elsewhere put a --surface fade behind them so code is never hidden without a cue."
+ },
+ {
+  "id": "ollama-probe-console-error",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "Choosing 'Local (Ollama)' in AI settings logs a console error when no server runs",
+  "evidence": "ml-training 1440, AI settings → Local (Ollama): an automatic GET http://localhost:11434/api/tags produces 'Failed to load resource: net::ERR_CONNECTION_REFUSED' in the console; the UI shows 'Server not found. Run: ollama pull codellama' (pulling a model does not start a server). No other console errors or warnings on any fixture or interaction (smoke suite over all 7 fixtures, design/review/round-1/a11y-perf/data/robust-good.json). Script design/review/round-1/a11y-perf/scripts/ollama.cjs, screenshot design/review/round-1/a11y-perf/drawer-local-ollama.png.",
+  "fix": "Probe only on an explicit 'Check server / Refresh models' action (or after the user edits Server/Port), and word the failure 'No Ollama server at localhost:11434 — start it with `ollama serve`, then pull a model'."
+ }
+]

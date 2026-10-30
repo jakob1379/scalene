@@ -27,7 +27,7 @@ from scalene.scalene_utility import generate_html
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 BUNDLE_PATH = REPO_ROOT / "scalene" / "scalene-gui" / "scalene-gui-bundle.js"
-TS_SOURCE_PATH = REPO_ROOT / "scalene" / "scalene-gui" / "scalene-gui.ts"
+TS_SOURCE_PATH = REPO_ROOT / "scalene-ui" / "src" / "scalene-gui.ts"
 
 
 def _build_profile(*, with_combined_stacks: bool) -> Dict[str, Any]:

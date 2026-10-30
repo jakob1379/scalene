@@ -1,0 +1,56 @@
+/* 90-motion.css — shared keyframes and motion utilities (DESIGN.md §5). Only transform,
+   translate, scale and opacity animate; durations come from tokens so reduced motion
+   (tokens at 0 ms) and ?still (everything off) render final states immediately. */
+
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes menu-in { from { opacity: 0; translate: 0 -4px; } }
+@keyframes m-fade { from { opacity: 0; } }
+@keyframes m-rise { from { translate: 0 6px; } }
+@keyframes m-grow { from { scale: 0 1; } }
+@keyframes m-flash {
+  0%, 25% { background-color: var(--flash); }
+  100% { background-color: transparent; }
+}
+@keyframes m-pulse {
+  from { scale: 1; opacity: 1; }
+  to { scale: 1.6; opacity: 0; }
+}
+
+/* M1 — reading-order reveal; set --d (ms) per element for the 30 ms stagger. */
+.m-reveal {
+  animation:
+    m-fade var(--dur-3) linear both,
+    m-rise 320ms var(--ease-out) both;
+  animation-delay: var(--d, 0ms);
+}
+/* M3/M5/M6 — meters and bars grow from their baseline. */
+.m-grow {
+  transform-origin: left center;
+  animation: m-grow var(--dur-5) var(--ease-out) both;
+  animation-delay: var(--d, 0ms);
+}
+/* M14 — jump highlighter: --flash held 300 ms, then fading out over 900 ms. */
+.m-flash { animation: m-flash var(--dur-flash) linear both; }
+/* M23 — peak ring pulse (DOM variant). */
+.m-pulse { animation: m-pulse var(--dur-5) var(--ease-out) both; }
+/* M10 — content replaced, not moved. */
+.m-crossfade { animation: m-fade 120ms linear both; }
+/* M25 — drop target. */
+.m-fade-in { animation: fade-in var(--dur-2) linear both; }
+
+/* Reduced motion (§5.4): no transform/position animation; opacity fades ≤ 120 ms remain. */
+:root.motion-reduce .m-reveal,
+:root.motion-reduce .m-grow,
+:root.motion-reduce .m-pulse,
+:root.motion-reduce .m-crossfade { animation: none; }
+:root.motion-reduce .menu { animation: fade-in 120ms linear; }
+/* The jump flash is a colour change, not motion: it stays (M14). */
+
+/* ?still: every final frame immediately (screenshots, tests). */
+:root.motion-still *,
+:root.motion-still *::before,
+:root.motion-still *::after {
+  animation: none !important;
+  transition: none !important;
+}

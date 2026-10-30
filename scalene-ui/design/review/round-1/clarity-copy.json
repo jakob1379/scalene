@@ -1,0 +1,226 @@
+[
+  {
+    "id": "short-empty-signal-card",
+    "severity": "blocker",
+    "area": "overview",
+    "title": "Jupyter 1000x400: Signal card renders as an empty box with only a time axis (cpu-only)",
+    "evidence": "cpu-only.json, 1000x400 light (short host). The Instrument card spends ~530x168 px (55% of its width) on a SIGNAL card that contains only the tick labels '0 5 s 10 s 15 s 20 s' and no channel, no label, no message. Cause: short hosts drop PHASE and TOP LINES (scope-layout.ts:92 effectivePresence), cpu-only has no memory and one thread, but scope.ts:243 decides to render from the un-reduced presence (topRows=5). Violates §4.4.2 ('If no channel is present ... the scope is not rendered, hotspots take the full width') and the spirit of must-fix 2 ('never an empty, unlabeled box'). Screenshots: design/review/round-1/clarity-copy/compact-cpu-only-1000x400.png, design/review/round-1/clarity-copy/zoom-compact-cpu-only-empty-scope.png.",
+    "fix": "In scope.ts compute presence with effectivePresence(basePresence(), metrics) before the render decision; when !anyChannel(...) do not mount the scope and give the hotspots the full Instrument width (8 rows fit). Alternatively keep a 3-row TOP LINES channel in short hosts when it is the only channel. Add a short-host case for cpu-only to the debugLayout/e2e checks (assert scope absent or channels.length > 0)."
+  },
+  {
+    "id": "short-time-split-unlabeled",
+    "severity": "major",
+    "area": "overview",
+    "title": "Compact 'Where the time went' shows three bare percentages with no Python/native/system labels",
+    "evidence": "Every fixture at 1000x400: tile text is 'WHERE THE TIME WENT | 11.6% | 61.9% | 26.1% | of run · 0.4% outside' (ml-training). The .ro-sl label row is display:none in short (computed via DOM: 'none/0' x3). Which number is Python vs native vs system is only encoded by colour in a 4 px bar - violates §1.3.2 (every colour has a non-colour twin) and §1.3.3 (unit and '% of what'). A Python developer cannot tell whether 61.9% is their code or native code. Screenshots: design/review/round-1/clarity-copy/zoom-compact-ml-readouts.png, design/review/round-1/clarity-copy/sheet-1000x400.png.",
+    "fix": "Keep a one-word label in short hosts: render each value as 'Py 11.6%  native 61.9%  sys 26.1%' (11/14, --fg-2 label before the number), or keep the .ro-sl row at 11 px and drop the micro bar instead. Never hide the labels while the numbers are shown."
+  },
+  {
+    "id": "busiest-function-no-denominator",
+    "severity": "major",
+    "area": "overview",
+    "title": "'Busiest function' readout has no 'of run' denominator (full and compact)",
+    "evidence": "cpu-only/basic/example at 1440x900: value '86.8%' with caption 'accelerations() · nbody.py:32 · 19.3 s' - nothing says 86.8% of what. At 1000x400 the compact caption is just 'accelerations()' (readouts.ts busiestTile short = functionChip(fn.name)), which breaks must-fix 31 ('compact readouts keep a short denominator'). The headline right above says 'Three lines ... account for 32.0% of the time', so an unlabelled 86.8% next to it reads like a contradiction. Screenshots: design/review/round-1/clarity-copy/first-cpu-only-1440x900-light.png, design/review/round-1/clarity-copy/zoom-compact-cpu-only-empty-scope.png.",
+    "fix": "Caption 'of run · accelerations() · nbody.py:32 · 19.3 s' (§4.0.3 'X% of run · s'); short caption 'of run · accelerations()'. Add busiest to the must-fix-31 test list."
+  },
+  {
+    "id": "short-hotspot-rows-lose-file-and-waiting",
+    "severity": "major",
+    "area": "overview",
+    "title": "Jupyter hotspots: file names left-truncated ('…erver.py:99'), event-loop badge reduced to a bare hourglass, no denominator",
+    "evidence": "1000x400 async-server: locations read '…erver.py:99', '…dlers.py:51', '…lers.py:107', '…lers.py:108' (neuron: '…_bert.py:66', huge: '…uids.py:495', '…ylov.py:192'); the basename itself is cut, so the user cannot tell which file a hotspot is in. Row #1 (59.6% asyncio.run(...)) shows only an hourglass glyph because '.ov.is-short .hs-badge-text {display:none}' - the word 'waiting' is gone, so the event loop is presented as the top hotspot without saying it waits (must-fix 28; only the aria-label says 'event loop, mostly waiting'). '.ov.is-short .hs-sub {display:none}' also removes 'by share of run time', so the 59.6% has no 'of run'. Screenshots: design/review/round-1/clarity-copy/zoom-compact-async-hotspots.png, design/review/round-1/clarity-copy/sheet-1000x400.png.",
+    "fix": "In short rows: (1) never truncate the basename - give .hs-loc a min-width of the 'basename:line' text and let the code cell shrink/fade first; drop only the directory. (2) Keep the badge word ('waiting') for the event-loop badge (leak can stay a glyph+tooltip), or replace the code chip with 'event loop · waiting' for that row. (3) Keep a one-line '% of run' hint (e.g., append 'of run' to the header 'Hotspots · % of run')."
+  },
+  {
+    "id": "hotspot-memory-secondary-clipped",
+    "severity": "major",
+    "area": "overview",
+    "title": "Hotspots > Memory: secondary '% of alloc.' is clipped mid-word ('33.0% o')",
+    "evidence": "ml-training 1440x900, Hotspots, metric Memory: secondary column shows '33.0% o', '21.4% o', '16.4% o', '5.0% of', '2.6% of' - the denominator 'of alloc.' is cut inside a word in the 52 px column (§4.5.2). The numbers lose their '% of what' and look like typos. Screenshots: design/review/round-1/clarity-copy/zoom-hotspots-memory-secondary-clipped.png, design/review/round-1/clarity-copy/sheet-hotspot-tabs.png.",
+    "fix": "Size the secondary column per metric (Memory needs ~100 px for '33.0% of alloc.'), or render it as '33.0%' with the unit line 'of alloc.' in the list subtitle; never clip a value mid-token (ellipsis between tokens only, §1.3.5)."
+  },
+  {
+    "id": "readout-captions-drop-context-at-1440",
+    "severity": "major",
+    "area": "overview",
+    "title": "At the 1440 reference, readout captions drop the method/location and keep vague or denominator-less phrases",
+    "evidence": "ml-training/huge 1440x900: GPU tile shows 'mean while running / peak device memory 8.62 GiB'; the full method 'mean while the main thread ran (time-weighted)' is replaced by the compact phrase and 'busiest train.py:173 96.4%' is dropped (only in the hover tooltip; huge tooltip: '... · busiest krylov.py:192 69.6%'). async-server Await tile shows 'of await time at [await asyncio.sleep(…)]' and drops 'bench_server.py:59' and '15.5 tasks suspended on average, 22 at most' (§4.3.2 table). Peak tile shows 'growth 52.2% · +212 MiB native threads': 'growth 52.2%' reads as 'memory grew 52%' - the Memory section's own wording is '52.2% of allocated memory stayed live'. Meanwhile the Elapsed and Possible-leaks tiles have ~40 px of empty height. Screenshots: design/review/round-1/clarity-copy/first-ml-training-1440x900-light.png, design/review/round-1/clarity-copy/first-async-server-1440x900-light.png, design/review/round-1/clarity-copy/first-huge-1440x900-light.png.",
+    "fix": "Give captions 3 rows at lg+ (equalise tile heights; the row already has the space), shorten the long phrases instead of swapping to the iframe phrase ('mean · main thread · time-weighted'), and change 'growth 52.2%' to '52.2% stayed live' and '+212 MiB native threads' to '212 MiB from native threads'. Keep the compact phrases for short only."
+  },
+  {
+    "id": "hundred-more-opens-one-file",
+    "severity": "major",
+    "area": "overview",
+    "title": "'100 more ›' promises the remaining ranked lines but opens one file's code view",
+    "evidence": "ml-training 1440: hotspot footer '100 more' (aria-label '100 more lines — open the code view ranked by time'). 108 lines have time across 6 files (adamw 17, loader 15, tokenizer 5, transformer 37, train 29, metrics 5). Clicking lands on the code view 'Line profile of train.py' ranked by Time (activeTab train.py) - the other 79 promised lines in 5 files are not in the list, and nothing tells the user. Screenshot: design/review/round-1/clarity-copy/flow-hotspots-100-more.png.",
+    "fix": "Either make the footer expand the hotspot list in place (25 → 50 → all, cross-file, same ranking and rank numerals), or route to a cross-file ranked view; if it must stay per-file, label it honestly ('21 more in train.py ›') and add 'Next file: transformer.py (37 lines) ›' in the ranked chip."
+  },
+  {
+    "id": "signal-threads-axis-depends-on-width",
+    "severity": "minor",
+    "area": "overview",
+    "title": "THREADS channel reports a different maximum thread count depending on window width",
+    "evidence": "ml-training: caption 'busy · 0–3' with top tick 3 at 1440x900 and 390x844, but 'busy · 0–2' with top tick 2 at 1000x400 (same data). Buckets are ~2 CSS px (§4.4.4), so narrower plots average more and the axis maximum changes. Meta says '5 threads'. Screenshots: design/review/round-1/clarity-copy/first-ml-training-1440x900-light.png, design/review/round-1/clarity-copy/first-ml-training-1000x400-light.png.",
+    "fix": "Compute the y scale from a width-independent bucketing (e.g., time buckets of max(10 x dt, tMax/600)) and draw at pixel resolution, or fix the axis to the thread count ('busy · 0–5 threads'). Same number at every viewport."
+  },
+  {
+    "id": "phase-strip-short-phase-noise",
+    "severity": "minor",
+    "area": "overview",
+    "title": "PHASE strip on async-server is only '69 short phases' / '42 short phases' hatching",
+    "evidence": "async-server 1440x900: the PHASE channel is a row of hatched cells labelled '69 short phases' and '42 short phases'; no phase is named, so the strip adds visual noise without information (an event-loop program has no long loop phases). Screenshot: design/review/round-1/clarity-copy/first-async-server-1440x900-light.png.",
+    "fix": "Hide PHASE when short/group cells cover > 50% of main-thread time, or label a group by its dominant member ('handle_request ×69'). Keep the legend chip 'short phases' only when a short cell is drawn."
+  },
+  {
+    "id": "link-caption-500-cap",
+    "severity": "minor",
+    "area": "overview",
+    "title": "Linked caption says 'ran in 500 main-thread samples' although 500 is Scalene's per-line cap",
+    "evidence": "ml-training 1440: hovering hotspot #2 sets the scope caption to 'train.py:165 · ran in 500 main-thread samples · 0 allocation events'. The line ran 8.78 s (~878 samples at 10 ms); 500 is the retention cap. The lens says it correctly ('500 main-thread samples (Scalene keeps up to 500 per line)'). Screenshot: design/review/round-1/clarity-copy/hover-ml-training-hotspot2-linked.png.",
+    "fix": "When the count equals the cap, write '500 kept samples (cap)' or '≥ 500 main-thread samples'; use the same phrase in the TOP LINES tooltip and the lens."
+  },
+  {
+    "id": "hotspot-footer-redundant-copy",
+    "severity": "minor",
+    "area": "overview",
+    "title": "Hotspot subtitle and footer repeat the same sentence; 'more' links lack a noun",
+    "evidence": "ml-training 1440, Memory metric: subtitle 'by peak attributed · peaks overlap, so they do not add' and footer 'Sorted by peak. Peaks overlap in time, so they do not add.'; GPU: subtitle 'mean util. while running · lines ≥ 1% of run' and footer 'Lines ≥ 1% of run, by GPU utilization while each ran.'. Footer links read '100 more', '21 more', '2 more' (no noun); on phones 'Show all 8' and '100 more ›' sit two rows apart and mean different things. Screenshots: design/review/round-1/clarity-copy/sheet-hotspot-tabs.png, design/review/round-1/clarity-copy/first-ml-training-390x844-light.png.",
+    "fix": "Keep the explanation once (subtitle); footer = Pareto/total + '100 more lines ›'. Spell out 'utilization' in the subtitle. On xs label the expander 'Show top 8'."
+  },
+  {
+    "id": "hotspot-location-hides-function",
+    "severity": "minor",
+    "area": "overview",
+    "title": "Hotspot rows never show the enclosing function at the 1440 reference",
+    "evidence": "ml-training 1440: location column shows only 'train.py:173'; §4.5.2 specifies '`train()` · train.py:173'. CSS hides .hs-loc-fn under @container hot (max-width: 640px), and the hotspot pane is ~550 px at lg, so the function is hidden at every reference width except xxl. Python developers navigate by function; the aria-label has it ('in train'), sighted users do not. Screenshot: design/review/round-1/clarity-copy/first-ml-training-1440x900-light.png.",
+    "fix": "Show the function when the container is ≥ 520 px (truncate it before the file), or put 'in train()' as a --fg-3 suffix after the code fade."
+  },
+  {
+    "id": "async-headline-too-long-xs",
+    "severity": "minor",
+    "area": "overview",
+    "title": "async-server headline wraps to 7 lines on a phone (spec cap 4)",
+    "evidence": "async-server 390x844: the headline 'bench_server.py ran for 15.7 s. 59.6% of it is the event loop (asyncio.run(…)), mostly waiting. The busiest code, hashlib.pbkdf2_hmac(…) (21.6%, handlers.py:51), runs inside a coroutine, so the loop stalls while it runs.' takes 7 lines (§2.4.2 / §4.2: ≤ 4 at xs), pushing the time split and hotspot #3 to the bottom edge. Screenshot: design/review/round-1/clarity-copy/sheet-390-a.png.",
+    "fix": "Add an xs/short variant of the event-loop branch: '59.6% is the event loop, mostly waiting; hashlib.pbkdf2_hmac(…) (21.6%) blocks it.' (keep the full sentence in the tooltip/finding)."
+  },
+  {
+    "id": "ai-discoverability-overview",
+    "severity": "minor",
+    "area": "overview",
+    "title": "AI proposals are invisible on the overview; the app-bar status ring is unexplained",
+    "evidence": "ml-training 1440 first screen: the only AI affordance is 'AI ○' in the app bar (ring = not set up; meaning only in the tooltip 'AI settings — not set up'). The gpu-sync finding ('The host waits on the GPU') and the hotspot rows offer no 'propose a fix' action; Optimize appears only on Code row hover or in the lens. Screenshots: design/review/round-1/clarity-copy/first-ml-training-1440x900-light.png, design/review/round-1/clarity-copy/code-row-hover-17.png.",
+    "fix": "Add a '✦ Propose a fix' button to finding cards and to hotspot rows on hover/focus (it calls the same controller trigger); label the app-bar button 'AI fixes' with a visible 'Set up' badge when not ready."
+  },
+  {
+    "id": "hidden-files-meta-button-noop",
+    "severity": "minor",
+    "area": "overview",
+    "title": "'(+16 below 1%)' meta button scrolls to Code but does not show the hidden files",
+    "evidence": "huge.json 1440: meta button (aria-label '16 more files below 1% of time with little memory — show in the code view') scrolls to #code (scrollY 933) but the 'All files (+16)' menu stays closed and no hidden file is revealed; the user lands on krylov.py with no hint where the 16 files are. §4.2 says it 'opens the hidden-files list in the code navigator'. Screenshot: design/review/round-1/clarity-copy/flow-huge-hidden-files.png.",
+    "fix": "After scrolling, open the All-files menu (or rail/sheet) with the hidden group expanded and focused; if the menu cannot open, flash the 'All files (+16)' control."
+  },
+  {
+    "id": "fold-copy-says-without-samples",
+    "severity": "major",
+    "area": "code",
+    "title": "Fold rows say 'lines without samples' for lines that have samples",
+    "evidence": "ml-training train.py (default 'Profiled functions'): fold '32 lines without samples · 19–50 · 0.2% of run'. Lines 19 (6 cpu_samples_list entries, 0.11% of run) and 23 (4 entries, 0.07%) are inside it, so the label contradicts its own '0.2% of run'. Same for '19 lines without samples · 51–69 · <0.1% of run'. The 'Hot lines' tooltip also says 'Only lines with samples' while it hides every line ≤ 1.0% (§4.0.4). Screenshots: design/review/round-1/clarity-copy/sec-ml-training-1440-code.png, design/review/round-1/clarity-copy/flow-huge-hidden-files.png.",
+    "fix": "Wording by content: Σ=0 → '15 lines without samples · 1–15'; Σ>0 → '32 lines below 1% each · 19–50 · 0.2% of run total'. Tooltip for Hot lines: 'Lines with > 1% of run time, or memory, GPU or await activity'. Also fix the §4.8.2 template in DESIGN.md."
+  },
+  {
+    "id": "source-column-starved",
+    "severity": "major",
+    "area": "code",
+    "title": "The code itself gets the least room: source starts at 60% of the table and is clipped; actions cover the selected line",
+    "evidence": "ml-training: at 1440x900 the SOURCE column starts at x=849 and is 502 px of a 1318 px table, behind 9 metric columns (TIME MEMORY GPU FOOTPRINT COPY GPU MEM ALLOC AVG); 7/43 rendered rows are clipped. 1024x768: 354 px, 15/39 clipped. 1000x400: 302 px, 12/28 clipped, and on the jumped-to row the action group covers the code ('loss_value = l' + [Optimize][⋯]). Most rows have empty metric cells, so the eye crosses ~400 px of blank between the % and the code. Screenshots: design/review/round-1/clarity-copy/flow-ml-training-1440-1-hotspot-to-line.png, design/review/round-1/clarity-copy/short-hotspot-to-line.png, design/review/round-1/clarity-copy/sec-ml-training-1440-code.png.",
+    "fix": "Raise sourceMin in the width budget (lg 640, md/sm 420, short 400) so AVG/ALLOC/GPU MEM/COPY drop to the lens earlier (they are always in the detail panel); render the row action group below/over the metric cells or as a compact '⋯' when it would cover more than 25% of the visible code."
+  },
+  {
+    "id": "code-toolbar-functions-ambiguous",
+    "severity": "minor",
+    "area": "code",
+    "title": "'Functions' means two different things in the same toolbar",
+    "evidence": "Code toolbar: view 'Lines | Functions' next to display mode 'Profiled functions | Hot lines | All lines'. 'Profiled functions' actually means 'hot lines plus the other lines of functions that have hot lines'; first-time users read it as a functions list. Screenshot: design/review/round-1/clarity-copy/sec-ml-training-1440-code.png.",
+    "fix": "Rename the display modes to 'Hot + context | Hot only | All lines' (tooltips unchanged in meaning), or 'Around hot lines | Hot lines | All lines'."
+  },
+  {
+    "id": "file-tabs-unlabeled-memory",
+    "severity": "minor",
+    "area": "code",
+    "title": "File tabs show a bare memory value with no label",
+    "evidence": "ml-training code tabs: 'train.py 58.8% 1.20 GiB', 'loader.py 6.3% 800 MiB'. Neither number says what it is (share of run? peak? allocated?); the Files hotspot tab writes 'peak 1.20 GiB' for the same value. Screenshot: design/review/round-1/clarity-copy/sec-ml-training-1440-code.png.",
+    "fix": "Render the memory part as 'peak 1.20 GiB' (or put the unit line 'of run · peak' once under the tab strip) and keep the full sentence in the tab tooltip."
+  },
+  {
+    "id": "timeline-lod-grey-not-in-legend",
+    "severity": "major",
+    "area": "canvas",
+    "title": "At default zoom the timeline's main lane is mostly a grey that the legend does not explain",
+    "evidence": "ml-training 1440, Timeline at 0–54.1 s: ~80% of the main lane below depth 2 is a mid grey; the legend lists Python frame, native frame, unresolved, GC, I/O & waits, GIL - none is grey. Hovering the grey returns native frames ('at::native::_local_scalar_dense_cuda', 'cublasLtMatmul') and unresolved frames; zoomed to 25.8–28.2 s the same area is light-blue native/hatched unresolved. The grey is the LOD aggregate (--frame-lod). The default view therefore cannot be decoded. Screenshots: design/review/round-1/clarity-copy/sec-ml-training-1440-timeline.png, design/review/round-1/clarity-copy/timeline-zoomed.png.",
+    "fix": "Colour LOD pixels by the majority kind of the merged segments (as the collapsed activity strip already does), at reduced contrast; if a neutral LOD colour stays, add a legend chip 'many short frames — zoom in' and mention it in the footnote."
+  },
+  {
+    "id": "timeline-show-in-no-caption",
+    "severity": "major",
+    "area": "canvas",
+    "title": "'Show in timeline' lands on a zoomed range with outlines but never says which line is shown",
+    "evidence": "ml-training: lens of train.py:173 → 'Show in timeline' zooms to '10.9 s – 52.4 s' and outlines segments in black, but the timeline section text has no mention of train.py:173 (checked innerText; only #sr-polite announces it). The user cannot tell why this range or what the outlines are, and there is no clear-highlight control. Screenshot: design/review/round-1/clarity-copy/flow-ml-training-1440-4-show-in-timeline.png.",
+    "fix": "Add a header chip after a Show-in jump: 'Showing train.py:173 · loss_value = loss.item() · in 19.6% of stack samples  [× clear] [← back to code]'. Same chip pattern for Stacks (its breadcrumb is good but lacks the way back)."
+  },
+  {
+    "id": "cross-view-terms-inconsistent",
+    "severity": "minor",
+    "area": "canvas",
+    "title": "Same concept, different names across views",
+    "evidence": "(1) The wait hatch is 'waiting' in the scope legend/readout card but 'I/O & waits' in the timeline legend and lanes. (2) Lines are 'train.py:173' everywhere except flame/timeline frames 'train:173' (function:line), which looks like a different file. (3) Functions: 'train()' in headline, lens and code fn headers vs 'ƒ train' in Hotspots > Functions. (4) Flame toolbar says 'Colour' while the rest of the UI uses US spelling ('utilization', 'Optimize'). (5) Shortcuts dialog heading 'SIGNAL (SCOPE)' exposes the internal name 'scope'. Screenshots: design/review/round-1/clarity-copy/sec-ml-training-1440-stacks.png, design/review/round-1/clarity-copy/layer-shortcuts.png, design/review/round-1/clarity-copy/sheet-hotspot-tabs.png.",
+    "fix": "Pick one term per concept and use it everywhere: 'I/O & waits' (or 'waiting') in both legends; frame labels 'train() :173' or 'train · train.py:173' in tooltips/announcements; 'train()' in the Functions tab; 'Color'; shortcuts heading 'Signal'."
+  },
+  {
+    "id": "memory-section-copy",
+    "severity": "minor",
+    "area": "canvas",
+    "title": "Memory section copy: duplicated label, statistics jargon, unlabeled counts",
+    "evidence": "ml-training 1440, Memory: selected-site rows read 'Peak | peak 614 MiB attributed to this line (Python 0%)' (label repeated in the value) and 'Moments | 100 sampled on the rug · 200 allocation episodes'; chart caption '(rug under the chart)' - 'rug' is plot jargon. List button 'Show 25' (25 what?). Leak rates '5.71 MiB/s' in tiles/sites have no verb ('grows'). Thread lanes: 'main 91.3% of samples' but 'thread 1 2.5%' without denominator. Screenshots: design/review/round-1/clarity-copy/sec-ml-training-1440-memory.png, design/review/round-1/clarity-copy/sec-ml-training-1440-timeline.png.",
+    "fix": "'Peak | 614 MiB attributed to this line (Python 0%)'; 'Moments | 100 allocation events shown as ticks under the chart · 200 episodes'; 'Show 25 sites'; 'grows 5.71 MiB/s'; worker lanes '2.5% of samples' (or one column header '% of samples')."
+  },
+  {
+    "id": "memory-axis-mixed-units",
+    "severity": "major",
+    "area": "shell-ai-core",
+    "title": "Memory axes mix MiB and GiB with odd values ('205 MiB, 410 MiB, 614 MiB, 819 MiB, 1.0 GiB')",
+    "evidence": "ml-training, Stacks > Memory tab at 1440: axis ticks '0, 205 MiB, 410 MiB, 614 MiB, 819 MiB, 1.0 GiB, 1.2 GiB … 2.6 GiB'. formatMemoryTickLabel (core/format.ts:193-205) chooses the unit per tick value, not per axis, so a 0.2 GiB step prints as random-looking MiB numbers below 1 GiB. §4.0.2 says 'unit = GiB if max ≥ 1024'. Screenshot: design/review/round-1/clarity-copy/flame-memory-tab.png.",
+    "fix": "Give formatMemoryTickLabel the axis max (or derive the unit from the step via niceMemStep) and use one unit per axis: '0, 0.2 GiB, 0.4 GiB …' - better, prefer binary-friendly steps (0.25/0.5 GiB → '0.25 GiB, 0.5 GiB'). Add a formatter test for a 3.17 GiB axis."
+  },
+  {
+    "id": "palette-file-fuzzy-beats-code",
+    "severity": "major",
+    "area": "shell-ai-core",
+    "title": "Command palette: typing 'loss' preselects adamw.py; Enter opens the wrong thing",
+    "evidence": "ml-training 1440, Ctrl+K, type 'loss': the FILES group is first with 'adamw.py /home/dev/llm-train/.venv/lib/python3.12/site-packages/torch/optim/' highlighted (subsequence l-o-s-s matched across the full path); 'loss_value = loss.item()' (21.4% of run) is second. Enter opens adamw.py. §4.20: Lines first when typing code-like text. Screenshot: design/review/round-1/clarity-copy/layer-palette-loss.png.",
+    "fix": "Match files on the basename (plus whole path segments), require a minimum fuzzy score, and order groups by their best item's score (exact/contiguous substring in code beats a scattered subsequence in a path)."
+  },
+  {
+    "id": "empty-state-wrong-for-empty-profile",
+    "severity": "major",
+    "area": "shell-ai-core",
+    "title": "A profile with no samples ({}) says 'No profile loaded'; in Jupyter the CTA is below the fold",
+    "evidence": "empty.json ({}) and blank ('') render identical copy: 'No profile loaded | Open a Scalene JSON profile to see where your program spends time and memory. Scalene writes {} when it collected no samples.' followed by 'Profile your program' steps. For {} Scalene did run and a profile was loaded - the user needs 'no samples were collected' and why. At 1000x400 the primary button 'Choose a profile…' starts at y=431 (viewport 400). Screenshots: design/review/round-1/clarity-copy/first-empty-1440x900-light.png, design/review/round-1/clarity-copy/sheet-empty.png.",
+    "fix": "Distinguish the cases: {} → title 'Scalene collected no samples' + 'Your program may have finished before Scalene took a sample, or spent its time outside the profiled files. Try a longer run, or --profile-all.'; '' → current copy. In short hosts put 'Choose a profile…' above the steps (steps collapsed)."
+  },
+  {
+    "id": "ai-setup-card-assumes-aws",
+    "severity": "major",
+    "area": "shell-ai-core",
+    "title": "AI setup card tells a first-time user to enter AWS keys; privacy copy differs from the drawer",
+    "evidence": "ml-training, lens 'Optimize line' with no provider configured: card 'Set up an AI provider to optimize line 173 | To activate proposed optimizations, enter your AWS access key ID and secret key in AI optimization options.' - the user never chose Amazon Bedrock (it is the fallback default), and 'AI optimization options' is not the drawer's name ('AI optimization'). Privacy line: card 'Scalene sends this code, up to 9 lines of context and its profile numbers.' vs drawer 'Scalene sends the selected code, up to 9 lines before it and its profile numbers, never the file name.' Screenshots: design/review/round-1/clarity-copy/ai-setup-card.png, design/review/round-1/clarity-copy/layer-ai-drawer.png.",
+    "fix": "When no provider was chosen explicitly, show 'Choose an AI provider — Anthropic, OpenAI, Google Gemini, Azure OpenAI, Amazon Bedrock or a local Ollama model — and add its key.' (only name AWS fields once Bedrock is picked). Use one privacy sentence constant in card and drawer."
+  },
+  {
+    "id": "no-way-back-after-show-in",
+    "severity": "major",
+    "area": "shell-ai-core",
+    "title": "After 'Show in stacks/timeline' there is no way back to the line you were reading",
+    "evidence": "ml-training 1440: hotspot #1 → code line 173 with lens (scrollY 3272) → 'Show in stacks' (scrollY 4420). No history entry is created (hash stays ''; browser Back leaves the report), Stacks offers no return link, and the nav item 'Code' lands at the section top (scrollY 953, focus on h2#code-h), ~2,300 px above the still-open lens. The hotspot → line → stacks → back loop the task describes is not possible without manual scrolling. Screenshots: design/review/round-1/clarity-copy/flow-ml-training-1440-2-show-in-stacks.png, design/review/round-1/clarity-copy/flow-ml-training-1440-3-back-to-code.png.",
+    "fix": "When a line is selected, make nav 'Code' (and palette 'Code') return to the selected row via jumpTo(selection, {open: false}); add a '← train.py:173' return chip to the Stacks/Timeline/Memory headers after a cross-view jump; optionally push a same-document history entry per jumpTo (replaceState for repeated jumps) so Back returns to the previous view."
+  }
+]

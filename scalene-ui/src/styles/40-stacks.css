@@ -1,0 +1,310 @@
+/* 40-stacks.css — call stacks section: toolbar, breadcrumb, axis, flame canvas (DESIGN.md §4.11). */
+
+.stacks-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--card-pad-y) var(--card-pad-x);
+  min-width: 0;
+}
+
+/* ── Toolbar (§4.11.2) ─────────────────────────────────────────────────── */
+.flame-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 32px;
+  min-width: 0;
+}
+.flame-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 280px;
+  max-width: 100%;
+  height: 32px;
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--control);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--fg-2);
+  cursor: text;
+}
+.flame-search:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.flame-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 30px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--fg);
+  font: var(--type-body);
+  outline: none;
+}
+.flame-search-input::placeholder { color: var(--fg-3); opacity: 1; }
+.flame-search-input::-webkit-search-cancel-button { cursor: pointer; }
+.flame-search-key { flex: none; }
+.flame-search:focus-within .flame-search-key { visibility: hidden; }
+
+.flame-match {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 28px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--fg-2);
+  font-variant-numeric: tabular-nums;
+}
+.flame-match[hidden] { display: none; }
+.flame-match strong { color: var(--fg); font-weight: 600; }
+.flame-match-text { margin-right: 4px; }
+.flame-prev svg { transform: scaleX(-1); }
+.flame-spacer { flex: 1 1 0; min-width: 0; }
+
+.flame-legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  min-width: 0;
+  font: var(--type-caption);
+  color: var(--fg-2);
+}
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  white-space: nowrap;
+}
+.legend-chip.mono { font: var(--type-caption-mono); }
+.legend-sw {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px var(--grid);
+}
+.legend-sw.sw-py { background: var(--frame-py); }
+.legend-sw.sw-native { background: var(--frame-native); }
+.legend-sw.sw-await {
+  background:
+    repeating-linear-gradient(135deg, var(--async) 0 1px, transparent 1px 4px),
+    var(--frame-await);
+}
+.legend-sw.sw-unresolved {
+  background:
+    repeating-linear-gradient(45deg, var(--cpu-sys) 0 1px, transparent 1px 4px),
+    var(--frame-unresolved);
+}
+.legend-sw.sw-gc { background: var(--gc); }
+.legend-sw.sw-lod { background: var(--frame-lod); }
+.legend-sw.sw-gil { background: var(--gil); }
+.legend-sw.sw-io {
+  background:
+    repeating-linear-gradient(135deg, var(--async) 0 1px, transparent 1px 4px),
+    color-mix(in srgb, var(--async) 35%, transparent);
+}
+.legend-ramp { gap: 6px; }
+.legend-ramp-word { color: var(--fg-2); }
+.legend-ramp-steps { display: inline-flex; gap: 1px; }
+.legend-ramp-steps .legend-sw { width: 10px; border-radius: 1px; }
+
+.flame-mode .select-label { font: var(--type-caption); color: var(--fg-2); }
+.flame-mode .select-input { height: 28px; }
+.flame-reset[hidden] { display: none; }
+.flame-more { display: none; }
+
+/* ── Breadcrumb (§4.11.3) ──────────────────────────────────────────────── */
+.flame-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  margin-top: -2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+  font-size: 13px;
+  line-height: 18px;
+}
+.flame-crumbs[hidden] { display: none; }
+.flame-crumbs::-webkit-scrollbar { display: none; }
+.crumb {
+  flex: none;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  color: var(--fg-2);
+}
+.crumb.mono { font: 400 12.5px/24px var(--font-mono); font-variant-ligatures: none; }
+.crumb:hover { background: var(--hover); color: var(--fg); }
+.crumb[aria-current="true"] { color: var(--fg); font-weight: 600; }
+.crumb:focus-visible { outline-offset: -2px; }
+.crumb-sep { flex: none; color: var(--fg-3); padding: 0 1px; }
+
+/* ── Axis + gridlines (§4.11.4; class names are part of the upstream contract) ── */
+.flame-plot { position: relative; min-width: 0; }
+.flame-plot > .flame-axis,
+.flame-plot > .memory-axis {
+  position: relative;
+  height: 24px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+  overflow: hidden;
+  font: var(--type-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-3);
+}
+.axis-tick-label {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  padding: 0 2px;
+  white-space: nowrap;
+  will-change: transform;
+}
+/* Label sets change by whole nested strides; a 90 ms fade instead of a pop (round 1). */
+.axis-tick-label.is-in { animation: fade-in var(--dur-1) linear both; }
+.axis-tick-label.is-out { opacity: 0; transition: opacity var(--dur-1) linear; }
+.axis-tick-mark {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 4px;
+  background: var(--grid-strong);
+}
+.flame-axis-caption {
+  position: absolute;
+  right: 0;
+  top: 2px;
+  padding-left: 12px;
+  background: var(--surface);
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+.flame-scroll { position: relative; min-width: 0; overflow: hidden; }
+.flame-scroll.is-scrolling {
+  overflow-y: auto;
+  -webkit-mask-image: linear-gradient(to bottom, var(--fg) calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to bottom, var(--fg) calc(100% - 24px), transparent);
+}
+.flame-body { position: relative; min-width: 0; }
+.flame-gridlines, .memory-gridlines, .timeline-gridlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.grid-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--grid);
+}
+.flame-canvas { cursor: default; }
+
+/* Keyboard focus box over the focused frame (§4.11.7): 2 px ink + 1 px surface ring. */
+.flame-segment.flame-focus {
+  position: absolute;
+  left: 0;
+  top: 0;
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+  box-shadow: inset 0 0 0 1px var(--surface);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.flame-loading {
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-md);
+  background: var(--sunken);
+  color: var(--fg-3);
+  font: var(--type-caption);
+}
+.flame-loading[hidden], .flame-plot[hidden], .flame-empty[hidden] { display: none; }
+.flame-empty { padding: 24px 0; color: var(--fg-2); font: var(--type-body); }
+
+@media (max-width: 599.98px) {
+  .flame-search { width: calc(100% - 40px); flex: 1 1 auto; }
+  .flame-mode { display: none; }
+  .flame-more { display: inline-flex; order: 1; }
+  .flame-match { order: 2; }
+  .flame-legend { order: 3; }
+  .flame-reset { order: 4; }
+  .flame-spacer { display: none; }
+  .flame-legend { gap: 2px 10px; }
+}
+
+/* ── "Show in stacks / timeline" caption (round 1) ─────────────────────── */
+.showin-host[hidden] { display: none; }
+.showin-chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  min-height: 36px;
+  padding: 4px 6px 4px 12px;
+  border-radius: var(--r-sm);
+  position: relative;
+  background: var(--sunken);
+  font: var(--type-caption);
+  color: var(--fg-2);
+  min-width: 0;
+}
+.showin-chip::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--focus);
+}
+.showin-text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.showin-lead { color: var(--fg-2); }
+.showin-loc { color: var(--fg); font: 600 12px/16px var(--font-mono); font-variant-ligatures: none; }
+.showin-code { color: var(--syn-text); font: var(--type-caption-mono); overflow-wrap: anywhere; }
+.showin-share { color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.showin-share[hidden] { display: none; }
+.showin-actions { display: inline-flex; gap: 4px; flex: none; }
+
+/* ── Touch details card (round 1): a tap pins what the hover tooltip shows ── */
+.tap-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
+  padding: 8px 10px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--raised);
+  box-shadow: var(--shadow-float);
+  font: var(--type-caption);
+  color: var(--fg);
+}
+.tap-card[hidden] { display: none; }
+.tap-card-head { display: flex; align-items: center; gap: 6px; min-height: 24px; }
+.tap-card-head .tt-kind { margin-bottom: 0; }
+.tap-card-close { margin-left: auto; }
+.tap-card-title { font: var(--type-body-strong); overflow-wrap: anywhere; }
+.tap-card-title.code { font: 600 13px/18px var(--font-mono); font-variant-ligatures: none; }
+.tap-card-rows { margin-top: 2px; }
+.tap-card-code { margin-top: 2px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tap-card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tap-card-btn { min-height: 32px; }

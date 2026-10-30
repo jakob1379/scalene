@@ -1,0 +1,183 @@
+/* 10-appbar.css — app bar (DESIGN.md §4.1, §2.4.1). No data hues except the logo mark. */
+
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-appbar);
+  height: var(--appbar-h);
+  background: color-mix(in srgb, var(--page) 85%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  border-bottom: 1px solid var(--line);
+  padding-inline: max(var(--gutter), env(safe-area-inset-left)) max(var(--gutter), env(safe-area-inset-right));
+}
+/* xxl: a 2560 px wide backdrop blur costs ~1 in 8 scroll frames (WP3 request §1, measured on
+   huge sparse.py); the bar is opaque there, like the code file bar. */
+@media (min-width: 2200px) {
+  .appbar { background: var(--page); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+.appbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  min-width: 0;
+}
+
+/* 1–2. Logo + divider */
+.appbar-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  min-height: 32px;
+  border-radius: var(--r-sm);
+  color: var(--fg);
+  text-decoration: none;
+}
+.appbar-logo-text { font: 600 15px/20px var(--font-ui); letter-spacing: -0.01em; }
+.appbar-divider { flex: none; width: 1px; height: 20px; background: var(--line-strong); }
+
+/* 3. Program: the wrapper takes the free space, the button hugs its content. */
+.appbar-program-wrap { display: flex; flex: 1 1 0; min-width: 0; }
+.appbar-program {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  margin-left: -8px;
+  border-radius: var(--r-sm);
+  line-height: 32px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-align: left;
+}
+.appbar-program:hover { background: var(--hover); }
+.appbar-prog-name { flex: none; font-size: 13px; font-weight: 600; color: var(--fg); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.appbar-prog-args { flex: 1 1 auto; min-width: 0; font-size: 12.5px; color: var(--fg-3); overflow: hidden; }
+
+/* 4. Section nav (lg+) */
+.appbar-nav { display: flex; align-items: stretch; align-self: stretch; gap: 4px; flex: none; }
+.appbar-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  font: 500 14px/20px var(--font-ui);
+  color: var(--fg-2);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.appbar-nav-link:hover { color: var(--fg); }
+.appbar-nav-link[aria-current] { color: var(--fg); }
+.appbar-nav-link[aria-current]::after {
+  content: "";
+  position: absolute;
+  left: 8px; right: 8px; bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--fg);
+}
+.appbar-nav-link:focus-visible { outline-offset: -2px; border-radius: var(--r-sm); }
+.appbar-sections { display: none; flex: none; }
+
+/* 5. Spacer (the program wrapper takes the free space; empty mode: the spacer does) */
+.appbar-spacer { flex: 0 0 4px; min-width: 0; }
+
+/* 6. Search: a button styled as a field */
+.appbar-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  width: 220px;
+  height: var(--ctl-h);
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--fg-3);
+  font-size: 13px;
+  line-height: 16px;
+  text-align: left;
+}
+.appbar-search:hover { border-color: var(--control); color: var(--fg-2); }
+.appbar-search-label { flex: 1; min-width: 0; }
+.appbar-search-key { flex: none; }
+
+/* 7–9. AI, Load, Theme, ⋯ */
+.appbar .icon-btn { flex: none; }
+.appbar-ai-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--fg-2);
+  flex: none;
+}
+.appbar-ai-dot.is-ready { background: var(--fg); border-color: var(--fg); }
+.appbar-ai-label { display: inline-flex; align-items: center; gap: 6px; }
+.appbar-ai-setup[hidden] { display: none; }
+.appbar-load-label { display: none; }
+.appbar-more { display: none; }
+
+/* ── Breakpoints (§2.4.1) ────────────────────────────────────────────────── */
+@media (min-width: 1600px) {
+  .appbar-search { width: 260px; }
+  .appbar-load-label { display: inline; }
+}
+@media (max-width: 1279.98px) {
+  .appbar-nav { display: none; }
+  .appbar-sections { display: inline-flex; }
+  .appbar-ai-label { display: none; }
+  .appbar-ai { padding: 0; gap: 0; }
+  .appbar-ai-dot { position: absolute; top: 6px; right: 5px; width: 6px; height: 6px; }
+  .appbar-search { width: 200px; }
+}
+@media (max-width: 1023.98px) {
+  .appbar-search { width: auto; padding: 0 8px; gap: 6px; }
+  .appbar-search-label { display: none; }
+}
+@media (max-width: 599.98px) {
+  .appbar-inner { gap: 8px; }
+  .appbar-logo-text, .appbar-prog-args, .appbar-sections, .appbar-load, .appbar-theme, .appbar-search-key { display: none; }
+  .appbar-search { width: var(--ctl-h); justify-content: center; padding: 0; border-color: transparent; background: transparent; color: var(--fg-2); }
+  .appbar-search:hover { background: var(--hover); color: var(--fg); }
+  .appbar-more { display: inline-flex; }
+}
+@media (max-height: 520px) {
+  .appbar-inner { gap: 8px; }
+  .appbar-logo-text, .appbar-prog-args, .appbar-nav, .appbar-sections, .appbar-search-label, .appbar-search-key, .appbar-ai-label, .appbar-load-label { display: none; }
+  .appbar-search { width: var(--ctl-h); justify-content: center; padding: 0; border-color: transparent; background: transparent; color: var(--fg-2); }
+  .appbar-search:hover { background: var(--hover); color: var(--fg); }
+  .appbar-more { display: inline-flex; }
+}
+
+/* Empty state (§4.16): only the logo, Load and Theme. */
+.appbar.is-empty .appbar-divider,
+.appbar.is-empty .appbar-program-wrap,
+.appbar.is-empty .appbar-nav,
+.appbar.is-empty .appbar-sections,
+.appbar.is-empty .appbar-search,
+.appbar.is-empty .appbar-ai,
+.appbar.is-empty .appbar-more { display: none; }
+.appbar.is-empty .appbar-load,
+.appbar.is-empty .appbar-theme { display: inline-flex; }
+.appbar.is-empty .appbar-spacer { flex: 1 1 0; }
+
+/* Forced colors: the current-section underline is a fill, so it needs a system colour. */
+@media (forced-colors: active) {
+  .appbar-nav-link[aria-current]::after { forced-color-adjust: none; background: Highlight; }
+}
+
+/* Coarse pointers on phones: 40 px app-bar targets (logo, icons) (§6.2.7). */
+@media (pointer: coarse) and (max-width: 599.98px) {
+  .appbar .icon-btn { min-width: 40px; height: 40px; }
+  .appbar-logo { min-height: 40px; min-width: 40px; justify-content: center; }
+}
+

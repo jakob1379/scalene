@@ -1,0 +1,84 @@
+{
+  "findings": [
+    {
+      "id": "profile-script-breakout",
+      "severity": "blocker",
+      "area": "shell-ai-core",
+      "title": "If a profiled source line contains </script>, the report is blank and the injected markup runs as script (template inlines raw profile JSON)",
+      "evidence": "Repro input: design/review/round-1/correctness-contract/repro/scriptbreak.json, which is basic.json with line 1 set to `html = \"</script><script>window.__pwned=1</script><!-- <script>\"`. I rendered it with upstream's real scalene_utility.generate_html (standalone=True and False) and launchbrowser.generate_html on a staged upstream tree that holds our template and bundle (repro/upstream_render.py). Result in Chromium for all three pages: a pageerror 'Invalid or unexpected token', 0 of 23 window globals installed, typeof profile === 'undefined', window.__pwned === true, and a page that shows only the footer (page-scriptbreak.su-standalone.png, page-scriptbreak.lb.png). Cause: template/index.html.template has `const profile = {{ profile or '{}' }};`. Jinja autoescape is off and json.dumps does not escape '<' or '/', so the HTML tokenizer ends the <script> element inside a JSON string. Scalene profiles carry the full source of each profiled file, so any user file with '</script>' in it (a Flask or Django view with inline HTML, an HTML-generating helper) breaks the whole report. When the page is served by `scalene view --api-keys-from-env`, the injected script runs on the same origin that serves /env-api-keys.json, so it could read the user's API keys. Upstream's `const profile = {{ profile }}` has the same flaw, but §7.1 already treats template breakage as in scope (the \"\" guard).",
+      "fix": "Escape '<' when inlining: `const profile = {{ (profile or '{}') | replace('<', '\\\\u003c') }};`. In JSON, '<' can only appear inside strings, so `\\u003c` is always a valid escape and the parsed data is unchanged. I verified this in scratch with jinja2 + Chromium: scriptbreak renders all sections, profile.files[..].lines[0].line round-trips exactly ('</script>…' shown verbatim), __pwned stays false, ml-training is unchanged, and \"\" still gives the empty state. Then: (1) add the `replace` filter to the Jinja subset in tools/render-fixture.mjs, (2) amend DESIGN §7.1 and the build.mjs template-shape check, (3) add a contract unit test that renders a profile whose source contains `</script>` and `<!--<script` in both modes and asserts no page error. upstream test_combined_stacks_gui.py still passes because its markers contain no '<'."
+    },
+    {
+      "id": "threads-busy-depends-on-viewport",
+      "severity": "major",
+      "area": "overview",
+      "title": "The scope's 'Up to N threads busy at once' gives a different N at each window width, and none of them is the real maximum",
+      "evidence": "ml-training, ?still, Chromium. The scope's accessible description (and the THREADS channel axis 'busy · 0–N') reads: 1000×400 → 'Up to 2 threads busy at once' (axis 0–2, jupyter-iframe-ml-training.png); 1024/1440/1920 → 'Up to 3'; 2560×1440 → 'Up to 4' (axis 0–4, scope-threads-ml-training-2560x1440.png). Independent recomputation in Python with the spec's run ends (min(next same-thread t, t + count×dt), dt = 10.0 ms): a sweep over the run intervals gives at most 5 threads with an active run at the same moment (all 5 threads). Averaging over ~2 px buckets reproduces the UI's numbers: 3.04 at 400 buckets, 3.72 at 700, 4.93 at 1000. Source: src/views/overview/scope.ts:1082 `Up to ${Math.ceil(busyMax - 1e-6)} threads busy at once`, where busyMax is the maximum of a per-pixel bucket mean. So the stated count depends on window size, which breaks principle 3 (every number is honest).",
+      "fix": "Compute the headline concurrency once in the model, independent of pixels. Either use the instantaneous maximum (sweep over run [start, end) intervals → 5 on ml-training) and phrase it 'Up to 5 threads ran at the same moment', or fix the averaging window (e.g. 100 ms) and say so ('at most 3.x threads busy on average over any 100 ms'). Keep per-bucket means for drawing only. Label the THREADS axis with a model value (thread count, or the fixed-window max) rather than the per-width bucket max, so 1000×400 and 2560 show the same scale. Add a unit test that the description is identical at widths 400/800/1200."
+    },
+    {
+      "id": "memory-axis-mixed-units",
+      "severity": "major",
+      "area": "shell-ai-core",
+      "title": "Memory flame axis mixes MiB and GiB with odd values ('205 MiB … 819 MiB, 1.0 GiB … 2.6 GiB')",
+      "evidence": "ml-training, Call stacks → Memory tab, 1440×900: the .memory-axis text is '0 205 MiB 410 MiB 614 MiB 819 MiB 1.0 GiB 1.2 GiB 1.4 GiB … 2.6 GiB' (flame-ml-training-memory.png). niceMemStep(3244 MiB, 16) picks GiB from the axis max and returns a 0.2 GiB step (204.8 MiB). formatMemoryTickLabel(v, step) (src/core/format.ts:193) then picks the unit per tick, so ticks below 1024 MiB print as decimal-GiB multiples in MiB (205/410/614/819) and the rest print in GiB. DESIGN §4.0.2 says 'unit = GiB if max ≥ 1024' and 'ticks land on 1, 2, 4 GiB…'. The caption 'MiB of attributed allocation' also names MiB while most ticks are GiB. The same formatter backs memoryScale (scope, timeline memory row, memory chart), so any footprint axis that crosses 1 GiB with a step below 1 GiB will mix units. Other widths checked: 390 px '0 1 GiB 2 GiB' and huge '0 2 GiB … 18 GiB' are fine.",
+      "fix": "Pass the axis unit into the label formatter: `formatMemoryTickLabel(mib, stepMiB, maxMiB)` with unit = GiB when maxMiB ≥ 1024, MiB when ≥ 1, else KiB, and decimals from the step in that unit. This gives '0 0.2 GiB 0.4 GiB … 2.6 GiB'. Alternatively, use binary sub-steps (256/512 MiB) when the GiB step would be under 1. Update memoryTicksN/memoryScale in src/charts/axis.ts to pass maxMiB. Make the flame caption unit-free ('attributed allocation'). Add a formatter test for (max 3244 MiB, 16 ticks) and (max 1500 MiB, 3 ticks)."
+    },
+    {
+      "id": "nan-json-rejected-by-loader",
+      "severity": "minor",
+      "area": "shell-ai-core",
+      "title": "Profiles with Python's NaN/Infinity tokens render from the template but fail in Load/drag-drop/load(text); an Infinity growth_rate shows as 'growth 0%'",
+      "evidence": "Scalene writes JSON with json.dumps(..., sort_keys=True, indent=4), and allow_nan defaults to True, so NaN/Infinity can be emitted. Repro: repro/nan.json (basic.json with 43 NaN and growth_rate Infinity). Through the template (JS literal) it renders correctly: NaN treated as absent, no errors (edge-nan.png). Through load(text) and through the #fileinput picker: toast 'Couldn't load profile: Unexpected token 'N', …\"_avg_mb\": NaN… is not valid JSON' and the empty state. DESIGN §4.0.1 says NaN/±Infinity → absent. The Peak readout also shows 'growth 0%' for growth_rate = Infinity, which shows an absent value as a measured 0 (principle 3).",
+      "fix": "In the JSON-text path (normalize/parseProfile and loader ingest), on a JSON.parse failure retry once after replacing bare `NaN`, `Infinity` and `-Infinity` tokens outside strings with `null` (a small string-aware scanner, or a regex anchored on `[:,\\[]\\s*` … `\\s*[,}\\]]`). Treat a non-finite growth_rate as absent: hide the growth part or say 'growth not recorded'."
+    },
+    {
+      "id": "whitespace-profile-blank-page",
+      "severity": "minor",
+      "area": "shell-ai-core",
+      "title": "A whitespace-only profile file renders `const profile = \\n;`: a blank page with two page errors instead of the empty state",
+      "evidence": "repro/ws.json contains just '\\n', rendered with upstream su.generate_html (both modes) and lb.generate_html. Chromium shows 'Unexpected token ';'' and 'profile is not defined', no empty state, and clickToLoadFile is missing (page-ws.su-standalone.png). The `{{ profile or '{}' }}` guard only covers the exactly-empty string.",
+      "fix": "Use `{{ (profile | trim or '{}') | replace('<', '\\\\u003c') }}` (combine with the escaping fix). Jinja filters bind tighter than `or`, so `profile | trim or '{}'` falls back for whitespace. Mirror it in tools/render-fixture.mjs and add a 'ws' case to the contract test."
+    },
+    {
+      "id": "jupyter-heartbeat-console-errors",
+      "severity": "minor",
+      "area": "shell-ai-core",
+      "title": "In the Jupyter host, /heartbeat logs net::ERR_EMPTY_RESPONSE to the console every 10 s, forever",
+      "evidence": "repro/jupyter_server.py copies the request handling of upstream scalene_jupyter.display_profile (only '/' and '/shutdown'; everything else gets send_response(404) without end_headers). It serves ml-training standalone in a 400 px iframe. Server log after 21 s: GET / ×1, /env-api-keys.json ×1, /heartbeat ×3. The iframe console has 4× 'Failed to load resource: net::ERR_EMPTY_RESPONSE' and keeps adding one every 10 s. The report itself renders fine (jupyter-iframe-ml-training.png). Under launchbrowser (repro/lb_server.py, the real CustomHandler + prepare_serve_dir) the heartbeat is correct: requests at 0 / 10 / 20 s, env keys fetched once, and the drawer is prefilled from the environment (anthropic + openai, 'from environment' badges).",
+      "fix": "In core/host.ts startHeartbeat, stop the interval after the first rejected or non-ok response. launchbrowser always answers 200, so a failure means the host has no keep-alive endpoint. Optionally skip the /env-api-keys.json fetch when the heartbeat probe failed."
+    },
+    {
+      "id": "elapsed-zero-shows-0s",
+      "severity": "minor",
+      "area": "overview",
+      "title": "With elapsed_time_sec = 0, every hotspot row and the Busiest function readout print '0 s' (§4.0.8 says seconds are hidden)",
+      "evidence": "basic.json with elapsed_time_sec = 0, rendered via the template (edge-elapsed0.png). The scope is correctly omitted and the headline reads 'ran for 0 s', but all 8 hotspot rows show '0 s' in the secondary column and the readout shows 'doit2() · testme.py:17 · 0 s'. The Peak readout still says 'at 1.62 s' (from samples), which contradicts 'ran for 0 s'.",
+      "fix": "When model.elapsed ≤ 0, drop the seconds parts: hotspot secondary column, busiest-function readout, function rows and code file bar. Keep percentages. Add the case to tests/unit/edgecases.test.mjs."
+    },
+    {
+      "id": "copy-badge-precision",
+      "severity": "minor",
+      "area": "shell-ai-core",
+      "title": "The hotspot copy badge rounds differently from fmtRate, so one line shows '13 MiB/s' and '13.5 MiB/s' on the same screen",
+      "evidence": "basic, overview 1440×900: hotspot #7 (testme.py:23) badge reads 'copy 13 MiB/s' while the Heavy copying finding on the same screen reads 'copies 13.5 MiB/s'. The code cell and the detail panel also say 13.5 MiB/s. Source: src/model/hotspots.ts:96 `copy ${x.copy >= 10 ? Math.round(x.copy) : x.copy.toFixed(1)} MiB/s`, which bypasses fmtRate. This breaks principle 3 (one formatter per quantity).",
+      "fix": "Use `copy ${fmtRate(x.copy)}` (→ 'copy 13.5 MiB/s', 'copy 22.0 MiB/s'), or add one compact rate formatter in core/format.ts and use it in the badge and the finding alike. Update the §4.5.2 example."
+    },
+    {
+      "id": "when-it-ran-misattributes",
+      "severity": "minor",
+      "area": "code",
+      "title": "Detail panel says 'No main-thread samples (worker thread or native only)' for lines that had no CPU time at all",
+      "evidence": "ml-training, vsNavigate(escape('/home/dev/llm-train/train.py'), 152), 1920×1080 dock: TIME shows 'No CPU time was sampled on this line.' and directly below, WHEN IT RAN shows 'No main-thread samples (worker thread or native only).' (detail-ml-training-152_120_173.png). Line 152 has py = c = sys = 0, so no worker thread or native time is involved. Source: src/views/code/detail.ts:345.",
+      "fix": "Only show that sentence when l.total > 0 and l.cpuTimes is empty. When total == 0, return null from whenBlock (the TIME block already says no CPU time was sampled)."
+    },
+    {
+      "id": "pluralization-counts",
+      "severity": "minor",
+      "area": "canvas",
+      "title": "Count phrases are not pluralized correctly: '1 allocation episodes', 'Top 1 files'",
+      "evidence": "Memory section, selected site: async-server handlers.py:9 → 'Moments 3 sampled on the rug · 1 allocation episodes'; neuron infer_bert.py:51 the same (src/views/memory/memoryview.ts:217). Hotspots footer: example and basic Files tab → 'Top 1 files = 99.9% of run time' (src/model/hotspots.ts:286 paretoText).",
+      "fix": "Pluralize from the count: `${n} allocation episode${n === 1 ? '' : 's'}`. In paretoText use the singular KIND_WORD when items.length === 1 ('Top file = …'), or hide the Pareto footer when only one item exists, since it equals that item."
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+[
+ {
+  "id": "scope-card-sc-row-collision",
+  "severity": "blocker",
+  "area": "shell-ai-core",
+  "title": "Scope hover readout card layout is broken by a CSS class collision (.sc-row)",
+  "evidence": "All fixtures, all viewports, both themes. Hover the signal at 1440x900 dark (ml-training): each readout row renders swatch alone in col 1, the label ('Footprint', 'Threads', 'Phase') floating mid-card in col 2, and the value pushed to the next line, with 6 px padding + 1 px divider under every row. Computed style: `.scope-card .sc-row` display=grid (expected flex). Cause: 80-shell.css:311 `.sc-row { display:grid; grid-template-columns:minmax(140px,44%) minmax(0,1fr); padding:6px 0; border-bottom:1px solid var(--line) }` (shortcuts dialog) loads after 20-overview.css:251 `.sc-row { display:flex }` (scope card, scope.ts:971-993). Also the 'Phase' swatch (.sw-phase) is a near-black square on --raised in dark (invisible). Screenshot: design/review/round-1/visual-motion/crops/scope-hover-card-ml-training-1440x900-dark.png, design/review/round-1/visual-motion/crops/scope-readout-card-dark.png. A scan of src/styles shows sc-row is the only true cross-component collision (other multi-file classes are deliberate contextual overrides).",
+  "fix": "Rename the shortcuts dialog rows (shortcuts.ts:161 + 80-shell.css:311-329) to `.kbd-row` (or scope them as `.sc-list > .sc-row`), and/or scope the overview rule as `.scope-card .sc-row`. Give `.sw-phase` a visible fill (--sunken + 1px --control border, matching the legend chip). Add a build/lint check in build.mjs that fails when a bare class selector is defined in two package stylesheets (20-xx vs 80-xx)."
+ },
+ {
+  "id": "linked-overlay-opaque-band",
+  "severity": "major",
+  "area": "shell-ai-core",
+  "title": "'Ran here' linked overlay becomes an opaque slab that hides the footprint and peak it should annotate",
+  "evidence": "ml-training 1440x900 light, hover hotspot #3 (torch.save, train.py:120, 264 samples in 51-54 s): the MEMORY and THREADS channels from 51 s to 54 s are painted solid --cpu-py; sampled pixel (12,83,185) vs token #044CB6 = ~97 % opacity. The peak marker and the trace segment that this very line caused (peak 3.11 GiB at 52.9 s) are hidden and the callout text is cut ('train.py:12'). Screenshot design/review/round-1/visual-motion/crops/link-hover-ml-training-light-row2.png. Cause: charts/raster.ts:90-96 draws one 1 px tick per sample at 0.3 alpha when count <= 300, so ~9 samples per pixel compound to ~96 % (spec cap for the density band is 0.5).",
+  "fix": "Always bin per pixel column (or per 2 px) and set alpha = min(0.5, 0.3 * count / perPixelMax) regardless of sample count; then re-stroke the footprint line (and peak ring) on the overlay above the band so data stays visible. Draw the peak callout on the overlay layer (or punch out its rect) so overlays never cover it."
+ },
+ {
+  "id": "peak-callout-occludes-trace",
+  "severity": "major",
+  "area": "overview",
+  "title": "Peak callout box covers the footprint trace it annotates (scope and memory chart)",
+  "evidence": "Glass callout sits on top of the line in: ml-training 1024x768 (trace hidden ~115 px, 45-52 s, design/review/round-1/visual-motion/crops/ml-1024-light-scope.png), ml-training 1000x400 (design/review/round-1/visual-motion/shots/ml-training/1000x400-light-overview.png), async-server 1440x900 (design/review/round-1/visual-motion/crops/async-1440-dark-scope-right.png: 13-15 s of trace behind 'peak 50.1 MiB'), huge 1440x900 light (design/review/round-1/visual-motion/shots/huge/1440x900-light-first.png), async/huge 390x844 (design/review/round-1/visual-motion/crops/scope-async-server-390x844-light.png, design/review/round-1/visual-motion/crops/scope-huge-390x844-dark.png) and the Memory section chart (design/review/round-1/visual-motion/shots/async-server/1440x900-light-timeline-v1.png bottom). debugLayout() passes because §4.4.7 only checks annotation-vs-annotation, never annotation-vs-data.",
+  "fix": "In charts/placement.ts add the sampled footprint polyline (per-px y) as an obstacle: reject a candidate whose rect comes within 4 px of any trace point in its x-span; add 'above-left'/'above-right' candidates (box bottom = min trace y over the span - 6) before the 'below' ones; fall back to the one-line label, then to the gutter caption. Extend the geometry test to assert callout ∩ trace = ∅ at 390, 1000x400, 1024 and 1440 on ml-training, async-server and huge."
+ },
+ {
+  "id": "xs-yticks-collide-with-data",
+  "severity": "major",
+  "area": "overview",
+  "title": "Phone (xs) in-plot y-tick labels sit on top of the data and switch sides",
+  "evidence": "390x844: async-server '40 MiB' is crossed by the footprint line, TASKS '13' and '0' are drawn over the hatched area, '7' on the area's left edge (design/review/round-1/visual-motion/crops/scope-async-server-390x844-light.png); huge '2 GiB' is overdrawn by spikes, THREADS '9' collides with the spike at the right edge (design/review/round-1/visual-motion/crops/scope-huge-390x844-dark.png). debugLayout ticks: async MEMORY labels at x=19 (left) for 60/40 MiB but x=284 (right) for 20 MiB; TASKS '7' left, '13'/'0' right — inconsistent placement. The 3 px halo is not enough on hatched/filled areas.",
+  "fix": "On xs reserve a 28-30 px right gutter (shrink the plot) for y labels, or keep them inside but always right-aligned on one side with a solid --surface pill (2 px padding, radius --r-xs) and reject labels whose pill intersects the data path/area top (same obstacle test as the callout); never flip a single label to the other side."
+ },
+ {
+  "id": "intro-readouts-zero-values",
+  "severity": "major",
+  "area": "overview",
+  "title": "Intro shows unlabeled '0.00 GiB' / '0.0 %' readouts before the headline, and the GPU bar disagrees with its number",
+  "evidence": "ml-training 1440x900 dark, 10x slow-motion filmstrip: at t=23 ms the headline is ~10 % opaque and readout labels are invisible, but values ('0.00 GiB', '0.0 %', '2'), captions ('at 52.9 s · train.py:120 · Python 1.0%') and leak buttons are fully opaque; at t=98 ms PEAK MEMORY label still hidden while '0.00 GiB' is shown; at t=139 ms the GPU meter is ~10 % grown (M6 starts at 120 ms) while the value still reads '0.0 %' (M2 GPU starts at 80+40x2=160 ms). Frames: design/review/round-1/visual-motion/crops/intro-hero-early-frames-dark.png, sheet design/review/round-1/visual-motion/filmstrip-intro-ml-training-1440x900-dark.png (also 390x844 and 1000x400 sheets). Violates the 'every frame is a truthful partial view' rule (§5.3.1) and must-fix 6 (composite never inconsistent mid-animation).",
+  "fix": "Give each tile one clock: the value, caption and micro-visual reveal (opacity) with the tile label (M1 delay), and the count-up and its meter (M2/M6) start at the same instant with the same duration and easing (e.g. 600 ms --ease-out for both, or meter driven from the count-up tween value). Until a count starts, keep the value at opacity 0 instead of rendering '0.00'. Keep leak buttons/captions in the M1 reveal."
+ },
+ {
+  "id": "glow-plus-lighter-drops-frames",
+  "severity": "major",
+  "area": "overview",
+  "title": "Scope sweep afterglow (mix-blend-mode: plus-lighter) drops the signature intro to 40-49 fps at 2560 dark",
+  "evidence": "Real-time rAF counting during the sweep window (origin+100..800 ms), headless Chromium, ml-training 2560x1440 dark: base 49/44 fps (2 runs); hiding .ss-glow -> 60/60; `.ss-glow.is-additive{mix-blend-mode:normal}` -> 61/60; removing the mask instead -> 47/40 (no gain); light theme (no blend) 60/60; 1440 dark 60 fps. perf trace also shows ~15 dropped frames between 180 and 720 ms with no long tasks (compositor-bound). Data: design/review/round-1/visual-motion/perf/intro-ml-training-2560x1440-dark.json; scripts design/review/round-1/visual-motion/scripts/perf.mjs and perfab.mjs (they read fixtures from a snapshot of out/*.html). Note: headless uses software compositing; still the only layer that costs frames.",
+  "fix": "Drop `mix-blend-mode: plus-lighter` on .ss-glow (20-overview.css:222). Pre-composite the bloom into the glow canvas instead (draw the data with shadowBlur and globalCompositeOperation='lighter' against a copy of the surface colour) and show it with normal blending, or limit the blended layer to the 112 px window (size the glow canvas to AFTERGLOW_PX and redraw its offset content per frame from the main thread only on xxl). Re-measure at 2560 dark: target 60 fps during the sweep."
+ },
+ {
+  "id": "hotspot-metric-flip-overlap",
+  "severity": "major",
+  "area": "overview",
+  "title": "Hotspot metric change (M8) superimposes moving rows on still-opaque leaving rows (unreadable text for ~100 ms)",
+  "evidence": "ml-training 1440x900 dark, click Memory metric, 10x slow-motion: t=18 ms persisting rows already show new values/ranks at old slots (rank '1' at slot 3); t=33-57 ms 'torch.save … 1.20 GiB' slides over 'scaler.scale… 16.2%' with both at full opacity (text on text); t=92 ms leaving rows still ghosted under entering rows; entering rows reach full opacity only ~280 ms. Strip: design/review/round-1/visual-motion/crops/hotmetric-rows-strip.png, sheet design/review/round-1/visual-motion/filmstrip-hotmetric-ml-training-1440x900-dark.png. Spec M8: leaving rows fade out in 90 ms, persisting rows FLIP 280 ms.",
+  "fix": "Take leaving rows out of flow (position:absolute at their old rect, z-index below) and fade them out in 90 ms --ease-in; start the persisting rows' FLIP after that (delay ~60-90 ms) and give moving rows an opaque --surface background + higher z-index; cross-fade the rank numeral at the end of the move; entering rows fade in after the move (stagger 20 ms). Add a filmstrip assertion: no two row text boxes intersect at any sampled frame."
+ },
+ {
+  "id": "cpu-only-short-empty-scope",
+  "severity": "major",
+  "area": "overview",
+  "title": "Jupyter/short host: CPU-only profiles render an empty SIGNAL card with only an x-axis",
+  "evidence": "cpu-only 1000x400 (both themes): the Instrument card's left 55 % shows 'SIGNAL', an empty plot and ticks '0 5 s 10 s 15 s 20 s' — no channel at all. debugLayout(): channels [] , plot.h = 0, ticks 5 (design/review/round-1/visual-motion/metrics/cpu-only-1000x400-dark.json; design/review/round-1/visual-motion/crops/montage-1000x400-dark.png left-middle). Cause: in `short` PHASE and TOP LINES have no height (§4.4.2 table '–') and THREADS needs >1 thread, but scope.present is computed without the layout mode. §4.4.2: 'If no channel is present … the scope is not rendered, and the hotspots take the full width'.",
+  "fix": "Compute presence per layout mode and call the no-scope path (inst.no-scope, hotspots full width) when the current mode has no drawable channel; better, in `short` keep TOP LINES (5x10) for single-thread/no-memory profiles so the iframe still shows when the top lines ran. Add cpu-only 1000x400 to the scope geometry test (plot.h > 0 or scope absent)."
+ },
+ {
+  "id": "cpu-only-top-lines-barcode",
+  "severity": "major",
+  "area": "overview",
+  "title": "CPU-only hero: TOP LINES strips stretch to 48 px each and read as five identical barcodes",
+  "evidence": "cpu-only 1440x900 (both themes): with no MEMORY channel the 5 TOP LINES rows grow from the spec 5x12 to 5x48 px (debugLayout: plot h=266, phase h=18, top h=240, design/review/round-1/visual-motion/metrics/cpu-only-1440x900-dark.json); bins of 2 px hold 0-3 samples so bars quantize to 1/3, 2/3, full height and every strip looks like the same noise (design/review/round-1/visual-motion/crops/cpu-1440-dark-scope.png). The same layout at 390 (design/review/round-1/visual-motion/crops/montage-390-overview-light.png, cpu-only) — the hero signal has no hierarchy and no calm. Also gutter caption wraps to an orphan 'ran'.",
+  "fix": "Keep TOP LINES at spec height (12-14 px/row, at most 20) and use the freed height for a real channel (e.g. main-thread Python/native/system share over time as a 100 %-stacked step-area from cpu_samples_list/timeline), or shrink the scope and let hotspots take more width. For sparse rows bin adaptively (≥ ~8 expected samples per bin) and draw a smoothed density area instead of per-bin spikes."
+ },
+ {
+  "id": "timeline-lod-grey-slab",
+  "severity": "major",
+  "area": "canvas",
+  "title": "Timeline main lane is ~70 % neutral LOD grey at default zoom, hiding the Python/native story",
+  "evidence": "Pixel census of the main lane (x 194-1341, y 262-460) at 1440x900: ml-training dark — --frame-lod #52627F 51.3 %, --frame-py 8.1 %, --frame-native 4.1 %, empty 26.6 % (≈70 % of painted area is LOD); light identical (51.1/8.1/3.5); huge dark LOD 23.4 % vs py 7.4 % / native 0.5 %. Screens design/review/round-1/visual-motion/shots/ml-training/1440x900-dark-timeline.png, design/review/round-1/visual-motion/shots/async-server/1440x900-light-timeline-v1.png; still mostly grey after one zoom step (design/review/round-1/visual-motion/filmstrip-rt-timeline-zoom.png). Spec §3.4 merges sub-pixel runs into one --frame-lod column — faithful, but the result is a grey wall under the user's 'clear, awe-inspiring' brief.",
+  "fix": "Amend §3.4/§4.12: colour each LOD column by the dominant kind of the merged runs (py/native/await/unresolved fill when one kind covers ≥ 60 % of the pixel's time, otherwise a 50/50 oklab mix of the two largest), keeping --frame-lod only as the 'mixed' fallback; keep the 1 px surface gap rule. Re-run the census: target LOD ≤ 20 % of painted area on ml-training."
+ },
+ {
+  "id": "phase-short-cells-invisible",
+  "severity": "major",
+  "area": "overview",
+  "title": "Short-phase cells and their legend chip are below 3:1 (barely visible interactive marks)",
+  "evidence": "Measured on 1440x900 ml-training: short-phase hatch ink vs card surface 1.56:1 (light: #CDCFD3 on #FFFFFF) and 1.37:1 (dark: max #282C31 on #0C0F14); the cell fill (--sunken) is 1.00-1.04:1 vs surface. Same for the legend swatch 'short phases'. These cells are keyboard-reachable and carry tooltips (§4.4.3), and on huge/async the whole PHASE row is short-phase cells (design/review/round-1/visual-motion/shots/huge/1440x900-light-first.png, design/review/round-1/visual-motion/crops/scope-async-server-390x844-light.png). §3.7 requires graphics ≥ 3.0.",
+  "fix": "Draw short-phase hatching with --control (3.30:1 light / 4.03:1 dark) at full alpha, 1 px lines, 4 px period, plus a 1 px --line-strong cell outline; give labelled cells a 1 px --line-strong border as well; update the legend chip to the same pattern. Add the pair to tools/check-contrast."
+ },
+ {
+  "id": "threads-zero-label-misplaced",
+  "severity": "minor",
+  "area": "overview",
+  "title": "THREADS y-axis '0' label sits at the level of the busy line, not the baseline",
+  "evidence": "ml-training 1440x900: THREADS channel y 223-263; '0' label rect y 250-263 (clamped up, centre 256.5) while the busy line (~1.15 threads of 3) is at y≈248 — the '0' reads as labelling the line. At 1024 (channel 118-150, label 137-150, line ≈ 138) it is level with the line. design/review/round-1/visual-motion/crops/ml-1440-light-scope-detail.png, design/review/round-1/visual-motion/crops/ml-1024-light-scope.png. The MEMORY axis has no 0 label at all, so the two channels anchor labels differently (top tick hangs below its gridline, middle tick centred).",
+  "fix": "Bottom-align the 0 label so its baseline sits on the channel baseline and add a 3 px tick mark at each labelled value, or drop the 0 label (baseline is implicit) and show only max as '3' at the top, consistent with MEMORY; draw a 1 px --grid-strong baseline under THREADS/TASKS."
+ },
+ {
+  "id": "top5-gutter-orphan-and-crowding",
+  "severity": "minor",
+  "area": "overview",
+  "title": "TOP 5 gutter: caption wraps to an orphan 'ran' and rank numerals collide at 10 px pitch",
+  "evidence": "1440x900: 'TOP 5 / when they / ran' wraps to 3 lines in the 104 px gutter (design/review/round-1/visual-motion/crops/ml-1440-dark-scope-left.png); 1024x768 and 390x844: rows are 10 px apart but numerals are 11 px text, so '3'/'4'/'5' touch (design/review/round-1/visual-motion/crops/ml-1024-light-scope.png, design/review/round-1/visual-motion/crops/scope-async-server-390x844-light.png). Spec: label 'WHEN TOP 5 RAN' on the first row, numerals mono 11 --fg-2.",
+  "fix": "Use the spec label 'WHEN TOP 5 RAN' (micro, one line, nowrap) and move the numeral column inside the plot's left edge (8 px column) so the caption has the full gutter; at 10 px pitch render numerals at 9-10 px tabular or show only 1, 3, 5."
+ },
+ {
+  "id": "flame-label-degenerate-truncation",
+  "severity": "minor",
+  "area": "canvas",
+  "title": "Flame labels degrade into ellipsis soup ('to……)', 'at:……)', 'me…S')",
+  "evidence": "1440x900 dark after zooming train:165: 'tor……)', 'at:……)', 'cud…el', '__fu…mmon' (design/review/round-1/visual-motion/crops/flame-rt-1-after-click.png); 390x844: 'to……)', 'at:…(…)', 'met…RGS', '0x7f3…' (design/review/round-1/visual-motion/crops/montage-390-sections-ml-dark.png). Middle truncation is applied after collapsing '(…)', producing two adjacent ellipses and 1-3 meaningful characters.",
+  "fix": "Collapse templates/params first, then middle-truncate only the identifier part; never emit two ellipses; if fewer than 6 non-ellipsis characters fit, drop the label (the fill + tooltip carry it) — same rule for hex ips."
+ },
+ {
+  "id": "flame-axis-thinning-flicker",
+  "severity": "minor",
+  "area": "canvas",
+  "title": "Flame axis label thinning jumps between irregular sets during the zoom tween",
+  "evidence": "Real-time screencast of a flame click (ml-training 1440 dark): t=79-120 ms labels 0/20/40/60/80/100 %, t=137-151 ms labels 0/10/30/50/70/90 % (irregular step: 0 then 10 then 30), then all 10 % steps — labels pop in and out each frame. design/review/round-1/visual-motion/crops/flame-axis-during-zoom.png, design/review/round-1/visual-motion/filmstrip-rt-flame-zoom-in.png. (Zoom itself is smooth: ~300 ms, domain and axis re-base together.)",
+  "fix": "Thin labels by a fixed stride anchored at 0 (every 2nd/5th nice tick) chosen from the final domain's pixel spacing, and cross-fade label sets (90 ms) instead of recomputing per frame."
+ },
+ {
+  "id": "hotspots-dead-space-xxl",
+  "severity": "minor",
+  "area": "overview",
+  "title": "Hotspots card at xl/xxl leaves a ~75-115 px empty band between row 8 and the Pareto footer",
+  "evidence": "2560x1440 dark: rows end at y≈370 (crop), footer at y≈467 inside a card stretched to the scope height (design/review/round-1/visual-motion/crops/ml-2560-dark-hotspots-findings.png, design/review/round-1/visual-motion/shots/ml-training/2560x1440-dark-first.png). Code column is only ~200 px at span 3, so code is faded at 25 chars while the card has spare height.",
+  "fix": "At xl+ let rows fill: row height = clamp(36, (cardBody − footer) / 8, 44) or render 10 rows; alternatively anchor the footer right under the rows and let the findings column take the extra height."
+ },
+ {
+  "id": "findings-sparse-grid",
+  "severity": "minor",
+  "area": "overview",
+  "title": "Findings with 1-2 cards leave one or two empty grid columns",
+  "evidence": "1440x900: cpu-only and example show a single finding card in the left third of an empty row; async-server and neuron show 2 cards and an empty third column (design/review/round-1/visual-motion/shots/cpu-only/1440x900-dark-first.png, design/review/round-1/visual-motion/shots/async-server/1440x900-dark-first.png, design/review/round-1/visual-motion/shots/neuron/1440x900-light-first.png).",
+  "fix": "Use `grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))` (cards stretch to fill) or span: 1 card → 2/3 width + muted 'no other findings' note; keep max line length ~72ch."
+ },
+ {
+  "id": "pareto-bar-not-in-intro",
+  "severity": "minor",
+  "area": "overview",
+  "title": "Hotspots Pareto bar is fully drawn while the row meters are still growing",
+  "evidence": "Intro filmstrips (1440 dark t=0-300 ms, 390 dark t=0-300 ms): 'Top 8 lines = 58.4 %' cumulative bar is at final length from the first frame while all 8 row meters are at 0 (M5 starts at 200 ms) — the sum is shown before its parts. design/review/round-1/visual-motion/filmstrip-intro-ml-training-390x844-dark.png, design/review/round-1/visual-motion/filmstrip-intro-ml-training-1440x900-dark-crop.png.",
+  "fix": "Grow the Pareto bar with M5 (start after the last row, ≤ 830 ms) or reveal it with opacity at the same time as row 8."
+ },
+ {
+  "id": "hotspot-location-drops-function",
+  "severity": "minor",
+  "area": "overview",
+  "title": "Hotspot location omits the function at 1440 but shows it at 1024",
+  "evidence": "1024x768: 'train() · train.py:173'; 1440x900 and 2560x1440: only 'train.py:173' (design/review/round-1/visual-motion/shots/ml-training/1024x768-light-first.png vs 1440x900-light-first.png). Spec §4.5.2 Location at lg: '`train()` · train.py:173'. Wider screens show less information.",
+  "fix": "Restore the function chip at lg+ (150 px column with left ellipsis on the path) or give the location column the width the code fade currently takes at lg."
+ },
+ {
+  "id": "headline-chip-paren-gap",
+  "severity": "minor",
+  "area": "overview",
+  "title": "Headline: parentheses float away from code chips ('( asyncio.run(…) )')",
+  "evidence": "async-server 1440x900: 'event loop ( asyncio.run(…) ), mostly waiting' — a full space each side of the chip inside the parentheses (design/review/round-1/visual-motion/crops/async-headline-paren-spacing.png); neuron/example headlines '(infer_bert.py:66)' are tight, so spacing is inconsistent.",
+  "fix": "Emit no whitespace between '(' / ')' and the chip segment in the generator (model/headline.ts) and give `.headline .chip-code` margin-inline: 0; if needed add 1 px optical inset via margin-inline: 1px."
+ },
+ {
+  "id": "number-unit-line-break",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "Values break between number and unit ('128' / 'MiB.')",
+  "evidence": "neuron 2560x1440 and 390x844, finding 'Memory peaks at 742 MiB': '…this line's own peak is 128' line-break 'MiB.' (design/review/round-1/visual-motion/crops/neuron-2560-dark-findings.png; also flagged by the overlap scan in design/review/round-1/visual-motion/metrics/neuron-2560x1440-dark.json).",
+  "fix": "Join number and unit with U+00A0 (or U+202F) in every formatter in core/format.ts (fmtMem, fmtTime, fmtRate, fmtPct with units), and keep '%' attached."
+ },
+ {
+  "id": "small-type-below-scale-timeline",
+  "severity": "minor",
+  "area": "canvas",
+  "title": "Timeline gutter sublabels use 10.5 px, below the smallest type token (11 px)",
+  "evidence": "`span.tl-sub` ('0.6% of samples', '2.8% of samples', …) computed 10.5px in every fixture/viewport (96 instances across the matrix, design/review/round-1/visual-motion/metrics/*.json smallText).",
+  "fix": "Use --type-micro (11/14) or --type-caption (12/16) for .tl-sub; if space is tight, shorten to '0.6 %' with the denominator in the tooltip."
+ },
+ {
+  "id": "code-clip-hard-edge",
+  "severity": "minor",
+  "area": "code",
+  "title": "Unwrapped code lines are cut mid-glyph at the ribbon edge with no fade",
+  "evidence": "1440x900 dark, wrap off: 'min_lr.', 'max_ste', 'progress' cut hard at the ribbon boundary (design/review/round-1/visual-motion/shots/ml-training/1440x900-dark-code-v1.png, lines 71-75, 96-105). Hotspots and memory sites already use a 24-28 px fade for the same situation, so the code view is inconsistent.",
+  "fix": "Apply the same right-edge mask (linear-gradient to transparent over 24 px) to clipped `.cv-src` cells (only when scrollWidth > clientWidth), keeping the full text in the tooltip."
+ },
+ {
+  "id": "mem-site-selected-crescent",
+  "severity": "minor",
+  "area": "canvas",
+  "title": "Selected allocation-site row: the 2 px selection bar bends into a crescent on the 8 px radius",
+  "evidence": "1440x900 dark memory section, selected site #3: the inset 2 px --select-bar follows the rounded left corners and reads as '(' (design/review/round-1/visual-motion/crops/ml-1440-dark-memsites.png). Spec: straight 2 px inset bar on selected rows.",
+  "fix": "Draw the bar with a ::before (left: 0; top: 6px; bottom: 6px; width: 2px; border-radius: 1px) or remove the left radius on selected rows."
+ },
+ {
+  "id": "dense-footprint-comb",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "Very dense footprints (example.json) draw as a glowing comb of spikes",
+  "evidence": "example 1440x900: 2,846 samples M4-downsampled still produce ~70 full-height spikes with shadowBlur glow (dark) that merge into a bright smear; the area fill only shows under the troughs (design/review/round-1/visual-motion/crops/example-1440-dark-footprint-comb.png, design/review/round-1/visual-motion/crops/example-1440-light-footprint-comb.png).",
+  "fix": "When more than one local extremum falls in a 2 px bin, draw a min-max envelope band (token at 35 %) plus the per-bin mean line, and drop the glow for that segment; keep the polyline path for sparse data."
+ },
+ {
+  "id": "hardcoded-radii",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "Off-scale hard-coded radii (4 px key chips and AI inline code, 18 px empty-state mark)",
+  "evidence": "Radius inventory across 70 loads: key chips (`kbd.key-chip`, 03-controls.css:216) 4px literal; empty-state mark 18px (80-shell.css:24); AI inline code (.ai-inline-code, 70-ai.css:152) 4px literal. Tokens are 3/6/8/12/16/999 (nested seg thumb at r-sm − 2 = 4 is fine). design/review/round-1/visual-motion/metrics/*.json radii.",
+  "fix": "Use --r-xs for key chips and --r-xl (16) or --r-lg for the empty mark tile; add a token check for literal border-radius values in tools/check-tokens.mjs."
+ },
+ {
+  "id": "short-empty-state-cta-below-fold",
+  "severity": "minor",
+  "area": "shell-ai-core",
+  "title": "Jupyter (1000x400) empty state: the primary 'Choose a profile…' button is below the fold",
+  "evidence": "empty 1000x400: card top-aligned, CTA at y≈447 and the drop zone at y≈480-525 in a 400 px iframe (design/review/round-1/visual-motion/shots/empty/1000x400-light-full.png). The first screen shows only the logo, title, sentence and step 1.",
+  "fix": "In `short`: logo 24 px inline with the title, steps as one row each (no wrap; horizontal scroll inside the chip), CTA + drop hint on one row; target CTA bottom ≤ 380 px."
+ }
+]

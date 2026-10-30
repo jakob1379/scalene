@@ -1,0 +1,209 @@
+/* 60-memory.css — memory section: stats row, footprint chart + rug, allocation sites (DESIGN.md §4.13). */
+
+.memory-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: var(--card-pad-y) var(--card-pad-x);
+  min-width: 0;
+}
+
+/* ── Stats (§4.13.1) ───────────────────────────────────────────────────── */
+.mem-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 40px;
+  margin: 0;
+}
+.mem-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mem-stat-label {
+  font: var(--type-micro);
+  letter-spacing: var(--ls-micro);
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.mem-stat-value {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  font: 600 20px/26px var(--font-ui);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+.mem-stat-value.is-danger { color: var(--danger); }
+.mem-stat-value[tabindex]:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-xs); }
+.mem-stat-cap { margin: 0; font: var(--type-caption); color: var(--fg-3); }
+.mem-at-loc { font-size: 12px; line-height: 18px; letter-spacing: 0; cursor: pointer; align-self: center; }
+.mem-at-loc:hover { border-color: var(--line-strong); color: var(--fg); }
+
+/* ── Grid: chart 8 | sites 4 at lg+ ────────────────────────────────────── */
+.mem-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0; }
+@media (min-width: 1280px) {
+  .mem-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: 24px; }
+  .mem-sites-col { border-left: 1px solid var(--line); padding-left: 24px; }
+}
+:root.short .mem-grid { grid-template-columns: minmax(0, 1fr); }
+:root.short .mem-sites-col { border-left: 0; padding-left: 0; }
+
+.mem-chart-col { min-width: 0; }
+.mem-caption {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  min-height: 20px;
+  margin-bottom: 6px;
+  font: var(--type-caption);
+  color: var(--fg-2);
+}
+.mem-rug-sw { display: inline-block; width: 2px; height: 10px; border-radius: 1px; background: var(--mem-py); margin-right: 2px; }
+.mem-rug-sw.is-leak { background: var(--danger); }
+.mem-cap-loc { color: var(--fg); font-size: 12px; }
+.mem-cap-leak { color: var(--danger); }
+.mem-figure { margin: 0; min-width: 0; }
+.mem-chart { position: relative; min-width: 0; cursor: crosshair; }
+.mem-empty { padding: 16px 0; color: var(--fg-2); font: var(--type-body); }
+
+/* Selected site detail under the chart: every number with its denominator. */
+.mem-detail { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); min-width: 0; }
+.mem-detail:empty { display: none; }
+.mem-detail-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-height: 28px; min-width: 0; }
+.mem-detail-label {
+  font: var(--type-micro);
+  letter-spacing: var(--ls-micro);
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.mem-detail-loc { min-width: 0; overflow-wrap: anywhere; font-size: 12.5px; color: var(--fg); font-weight: 600; }
+.mem-detail-code {
+  margin: 6px 0 10px;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  background: var(--sunken);
+  color: var(--syn-text);
+  font: var(--type-caption-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.mem-detail-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+  gap: 4px 24px;
+  margin: 0;
+}
+.mem-detail-row { display: flex; gap: 10px; min-width: 0; font: var(--type-caption); }
+.mem-detail-row dt { flex: none; width: 68px; color: var(--fg-2); }
+.mem-detail-row dd { margin: 0; color: var(--fg); font-variant-numeric: tabular-nums; min-width: 0; }
+.mem-detail-leak {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--danger-wash);
+  color: var(--danger);
+  font: 600 12px/16px var(--font-ui);
+}
+
+/* ── Sites (§4.13.3) ───────────────────────────────────────────────────── */
+.mem-sites-col { display: flex; flex-direction: column; min-width: 0; }
+.mem-sites-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 8px;
+}
+.mem-sites-title {
+  font: var(--type-micro);
+  letter-spacing: var(--ls-micro);
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.mem-sites { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mem-site {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  column-gap: 10px;
+  align-items: start;
+  min-height: 40px;
+  padding: 5px 8px 6px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.mem-site:hover, .mem-site.is-linked { background: var(--hover); }
+/* Selected: a straight 2 px bar inset from the rounded corners (never a crescent, round 1). */
+.mem-site[aria-selected="true"] { background: var(--select); }
+.mem-site[aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--select-bar);
+}
+.mem-site:focus-visible { outline-offset: -2px; }
+.mem-site-rank {
+  padding-top: 1px;
+  font: 400 11px/18px var(--font-mono);
+  color: var(--fg-3);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.mem-site-main { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.mem-site-line1 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.mem-site-loc { flex: none; font-size: 12px; line-height: 18px; color: var(--fg-2); }
+.mem-site-code {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--syn-text);
+  -webkit-mask-image: linear-gradient(90deg, var(--fg) calc(100% - 28px), transparent);
+  mask-image: linear-gradient(90deg, var(--fg) calc(100% - 28px), transparent);
+}
+.mem-site-line2 { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mem-site-line2 > .meter { flex: 1 1 auto; min-width: 40px; }
+.mem-site-line2 > .badge { flex: none; }
+.mem-site-val {
+  padding-top: 1px;
+  font: 600 13px/18px var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  white-space: nowrap;
+  text-align: right;
+}
+.mem-site-group { display: flex; flex-direction: column; gap: 2px; }
+.mem-site-group-label {
+  margin: 10px 8px 2px;
+  font: var(--type-micro);
+  letter-spacing: var(--ls-micro);
+  text-transform: uppercase;
+  color: var(--danger);
+}
+.mem-more { align-self: flex-start; margin-top: 6px; }
+.mem-more[hidden] { display: none; }
+
+@media (max-width: 599.98px) {
+  .mem-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+  .mem-stat-value { font-size: 18px; line-height: 24px; }
+}
+:root.short .mem-stat-value { font-size: 17px; line-height: 22px; }
+:root.short .mem-stats { gap: 8px 28px; }
+:root.short .mem-stat-cap { display: none; }

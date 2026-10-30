@@ -1,0 +1,224 @@
+/* 00-tokens.css — Scalene UI design tokens (DESIGN.md §3). Do not use raw colours elsewhere. */
+:root {
+  color-scheme: light;
+
+  /* ── Surfaces & ink ─────────────────────────────────────────────── */
+  --page: #F4F5F7;
+  --surface: #FFFFFF;
+  --raised: #FFFFFF;            /* popovers, drawer, lens (with shadow) */
+  --raised-2: #F6F7F9;          /* zebra / inner wells on raised */
+  --sunken: #F0F2F5;            /* tracks, empty meters, chart wells, code chips */
+  --line: #E4E7EC;              /* decorative hairline (no contrast requirement) */
+  --line-strong: #CDD2DA;
+  --control: #878E9B;           /* boundaries that identify a control: 3.30:1 on surface */
+  --grid: rgb(14 17 22 / 0.06);
+  --grid-strong: rgb(14 17 22 / 0.12);
+  --fg: #0E1116;                /* 18.9:1 on surface */
+  --fg-2: #454D5C;              /* 8.5:1 */
+  --fg-3: #5E6676;              /* 5.8:1 surface, 5.1:1 sunken: captions, units, line numbers */
+  --on-strong: #FFFFFF;         /* text on strong data fills */
+  --hover: rgb(14 17 22 / 0.035);
+  --select: #EDF3FC;            /* selected row background */
+  --select-bar: #0E1116;        /* 2 px inset bar on selected row */
+  --focus: #0E1116;             /* focus ring, 2 px + 2 px offset */
+  --flash: #FFF1B8;             /* jump-to-line highlighter (transient, not data) */
+  --glass: rgb(255 255 255 / 0.88);
+  --glass-line: rgb(14 17 22 / 0.08);
+  --scrim: rgb(14 17 22 / 0.32);
+  --glow: 0;                    /* 1 in dark: canvas shadowBlur multiplier */
+
+  /* ── Data: one hue per resource, lightness = origin ─────────────── */
+  --cpu-py: #044CB6;            /* Python time            7.74:1 */
+  --cpu-native: #1385BD;        /* native time            4.10:1 */
+  --cpu-sys: #8C8F94;           /* system time + 45° hatch 3.24:1 */
+  --mem-py: #007137;            /* Python memory          6.15:1 */
+  --mem-native: #579C50;        /* native memory          3.35:1 */
+  --copy: #C67600;              /* copy volume            3.50:1 */
+  --gpu: #8031C0;               /* GPU util / Neuron NC   6.73:1 */
+  --gpu-mem: #A777CA;           /* GPU memory / Neuron NRT 3.42:1 */
+  --async: #007E84;             /* await, I/O & waits (+135° hatch) 4.86:1 */
+  --gil: #C64080;               /* GIL contention         4.72:1 */
+  --gc: #4F5766;                /* garbage collection lane 7.27:1 (neutral: GC is housekeeping) */
+  --danger: #C92324;            /* leaks, errors          5.60:1 (also as text) */
+  --danger-wash: #FDECEC;       /* leak badge background; danger text on it 4.90:1 */
+
+  /* ── Row heat washes (max strength; JS sets --heat 0..1 on the row) */
+  --wash-cpu: #E0ECFF;
+  --wash-mem: #DCF2DF;
+  --wash-gpu: #F0E6FB;
+  --wash-await: #DDF2F2;
+
+  /* ── Stack frames (flame + timeline), "Kind" colour mode ─────────── */
+  --frame-py: #2F5FB3;          --frame-py-ink: #FFFFFF;        /* label 6.16:1 */
+  --frame-native: #93CDE0;      --frame-native-ink: #0E1116;    /* label 10.85:1; py:native 3.53:1 */
+  --frame-await: #CDECEC;       --frame-await-ink: #0E1116;     /* + hatch in --async */
+  --frame-unresolved: #E3E5E9;  --frame-unresolved-ink: #454D5C;
+  --frame-root: #DADDE3;        --frame-root-ink: #0E1116;
+  --frame-lod: #7D8BA3;         /* "busy" band for sub-pixel runs 3.45:1 */
+  --frame-dim: 0.78;            /* search non-match: mix 78 % toward --surface (oklab) */
+
+  /* ── Sequential ramps ("Self" colour mode, minimap heat) ─────────── */
+  --cpu-ramp-0: #EDF4FE; --cpu-ramp-1: #BFD3F2; --cpu-ramp-2: #91B3E4;
+  --cpu-ramp-3: #6492D6; --cpu-ramp-4: #3671C7; --cpu-ramp-5: #0050AF;
+  --cpu-ramp-ink-split: 4;      /* steps < 4 use --fg, steps ≥ 4 use #FFFFFF */
+  --mem-ramp-0: #EBF8EC; --mem-ramp-1: #C1DCC5; --mem-ramp-2: #98C19F;
+  --mem-ramp-3: #6FA67A; --mem-ramp-4: #458B56; --mem-ramp-5: #067132;
+  --mem-ramp-ink-split: 5;
+
+  /* ── "File" colour mode: 8 low-chroma tints, label --fg ──────────── */
+  --file-0: #C8D6E4; --file-1: #C8E4E0; --file-2: #C8E4CD; --file-3: #D6E4C8;
+  --file-4: #E4DBC8; --file-5: #E4CDC8; --file-6: #E4C8D6; --file-7: #D6C8E4;
+
+  /* ── Threads (Interleaved timeline only; lanes use position) ─────── */
+  --thread-0: #0072B2; --thread-1: #C35400; --thread-2: #00866A;
+  --thread-3: #A86F00; --thread-4: #B5568F; --thread-other: #8C8F94;
+
+  /* ── Neuron "device idle" bands: shape + colour (never colour alone) */
+  --band-low: var(--fg-3);      /* ● < 30 % idle */
+  --band-mid: var(--fg-2);      /* ◆ 30–60 % */
+  --band-high: var(--danger);   /* ▲ ≥ 60 % */
+
+  /* ── Syntax (calm, low chroma, away from data hues) ──────────────── */
+  --syn-text: #1F2430;          /* 15.5 surface / 12.9 max wash */
+  --syn-kw: #0E1116;            /* weight 600 */
+  --syn-str: #75523A;           /* 6.9 / 5.8 */
+  --syn-num: #7A4848;           /* 7.4 / 6.1 */
+  --syn-com: #5E6676;           /* italic; comments + docstrings 5.8 / 4.8 */
+  --syn-builtin: #454D5C;       /* builtins, decorators 8.5 / 7.1 */
+
+  /* ── Type ────────────────────────────────────────────────────────── */
+  --font-ui: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto,
+    "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  /* Ligature-free faces only: never add "Cascadia Code", "JetBrains Mono", "Fira Code". */
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Mono", Menlo, Consolas,
+    "DejaVu Sans Mono", "Liberation Mono", "Noto Sans Mono", monospace;
+  --type-micro: 600 11px/14px var(--font-ui);     --ls-micro: 0.06em;  /* uppercase */
+  --type-caption: 400 12px/16px var(--font-ui);
+  --type-caption-mono: 400 12px/16px var(--font-mono);
+  --type-body: 400 14px/20px var(--font-ui);
+  --type-body-strong: 600 14px/20px var(--font-ui);
+  --type-code: 400 13px/24px var(--font-mono);
+  --type-title: 600 15px/22px var(--font-ui);     /* card titles */
+  --type-section: 600 18px/24px var(--font-ui);   /* h2 */
+  --type-headline: 500 22px/30px var(--font-ui);  /* key numbers inside: 600 */
+  --type-readout: 600 30px/36px var(--font-ui);   --ls-readout: -0.02em;
+  --type-readout-unit: 500 15px/20px var(--font-ui);
+
+  /* ── Spacing (4 px grid) ─────────────────────────────────────────── */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px;
+  --sp-6: 24px; --sp-7: 32px; --sp-8: 40px; --sp-9: 48px; --sp-10: 64px;
+
+  /* ── Radii ───────────────────────────────────────────────────────── */
+  --r-xs: 3px;   /* meters, bar ends */
+  --r-sm: 6px;   /* buttons, inputs, chips, segmented thumbs */
+  --r-md: 8px;   /* tooltips, menus */
+  --r-lg: 12px;  /* cards, lens */
+  --r-xl: 16px;  /* drawer edge, sheets, palette */
+  --r-pill: 999px;
+
+  /* ── Elevation (one shadow per layer kind) ───────────────────────── */
+  --shadow-card: 0 1px 2px rgb(15 18 25 / 0.04);
+  --shadow-float: 0 12px 40px rgb(15 18 25 / 0.14), 0 1px 2px rgb(15 18 25 / 0.08),
+    0 0 0 1px rgb(14 17 22 / 0.06);
+  --shadow-drawer: -24px 0 64px rgb(15 18 25 / 0.18), 0 0 0 1px rgb(14 17 22 / 0.06);
+
+  /* ── Z-index scale ───────────────────────────────────────────────── */
+  --z-sticky: 10; --z-code-head: 20; --z-appbar: 30; --z-menu: 50; --z-tooltip: 60;
+  --z-scrim: 70; --z-drawer: 71; --z-palette: 80; --z-toast: 90; --z-drop: 95; --z-skip: 100;
+
+  /* ── Motion ──────────────────────────────────────────────────────── */
+  --dur-0: 0ms;      /* hover, crosshair, linked highlight, keyboard moves, palette */
+  --dur-1: 90ms;     /* press feedback, tooltip out, chip select */
+  --dur-2: 140ms;    /* tooltip in, small fades */
+  --dur-3: 200ms;    /* disclosure, segmented thumb, lens open, tab cross-fade */
+  --dur-4: 280ms;    /* FLIP re-rank, flame/timeline zoom, drawer */
+  --dur-5: 420ms;    /* first-load bar growth */
+  --dur-count: 600ms;  /* first-load count-up (hero totals only) */
+  --dur-sweep: 640ms;  /* first-load scope sweep */
+  --dur-flash: 1200ms; /* jump highlighter fade */
+  --stagger: 30ms;     /* rank stagger, cap 8 items */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-productive: cubic-bezier(0.2, 0, 0.38, 0.9);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);          /* exits only */
+
+  /* ── Layout ──────────────────────────────────────────────────────── */
+  --gutter: 32px;
+  --maxw: 2360px;
+  --appbar-h: 52px;
+  --row-h: 24px;
+  --file-bar-h: 40px;
+  --col-head-h: 32px;
+}
+
+/* Dark ("Instrument"). The resolved theme is ALWAYS written to <html data-theme> before first
+   paint (template head script, §7.1; core/theme.ts re-asserts it at boot for foreign hosts), so one
+   attribute selector is the single source of dark tokens. */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #07090D; --surface: #0C0F14; --raised: #12161D; --raised-2: #181D26; --sunken: #06080B;
+    --line: #1A1F28; --line-strong: #2A313D; --control: #6B7384;
+    --grid: rgb(255 255 255 / 0.055); --grid-strong: rgb(255 255 255 / 0.10);
+    --fg: #E8ECF2; --fg-2: #A3ADBC; --fg-3: #7F8999; --on-strong: #07090D;
+    --hover: rgb(255 255 255 / 0.035); --select: #162131; --select-bar: #E8ECF2; --focus: #E8ECF2;
+    --flash: #2B2616; --glass: rgb(18 22 29 / 0.82); --glass-line: rgb(255 255 255 / 0.08);
+    --scrim: rgb(0 0 0 / 0.55); --glow: 1;
+    --cpu-py: #79B4FF; --cpu-native: #378EC8; --cpu-sys: #6B7079;
+    --mem-py: #62D286; --mem-native: #549957; --copy: #F6B84D;
+    --gpu: #C190F6; --gpu-mem: #8E62BC; --async: #56D3D7; --gil: #F075AA; --gc: #B4BDCB;
+    --danger: #FA6863; --danger-wash: #3A1615;
+    --wash-cpu: #1B293F; --wash-mem: #172F1D; --wash-gpu: #2A2140; --wash-await: #13302F;
+    --frame-py: #9BC1F3; --frame-py-ink: #07090D;
+    --frame-native: #286A8A; --frame-native-ink: #E8ECF2;
+    --frame-await: #173B3D; --frame-await-ink: #E8ECF2;
+    --frame-unresolved: #262B33; --frame-unresolved-ink: #A3ADBC;
+    --frame-root: #1C222C; --frame-root-ink: #E8ECF2;
+    --frame-lod: #52627F; --frame-dim: 0.80;
+    --cpu-ramp-0: #15202D; --cpu-ramp-1: #2A3C54; --cpu-ramp-2: #3F5B7E;
+    --cpu-ramp-3: #577BAA; --cpu-ramp-4: #6F9DD9; --cpu-ramp-5: #91C1FF; --cpu-ramp-ink-split: 3;
+    --mem-ramp-0: #142318; --mem-ramp-1: #25442E; --mem-ramp-2: #376845;
+    --mem-ramp-3: #498E5E; --mem-ramp-4: #5CB678; --mem-ramp-5: #70E093; --mem-ramp-ink-split: 3;
+    --file-0: #2E4256; --file-1: #2E5650; --file-2: #2E5635; --file-3: #42562E;
+    --file-4: #56492E; --file-5: #56352E; --file-6: #562E42; --file-7: #422E56;
+    --thread-0: #3D8FD1; --thread-1: #E0702B; --thread-2: #1FA383;
+    --thread-3: #B8842A; --thread-4: #C06EA0; --thread-other: #696C71;
+    --syn-text: #D5D9E2; --syn-kw: #F2F4F8; --syn-str: #DBB597; --syn-num: #E8ACAB;
+    --syn-com: #8C94A4; --syn-builtin: #AAB1BF;
+    --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.025);
+    --shadow-float: 0 16px 48px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.06);
+    --shadow-drawer: -24px 0 64px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
+/* Ramps: label colour per step = ramp index < --*-ramp-ink-split ? --fg : --on-strong-ramp,
+   where the light theme uses #FFFFFF and the dark theme uses #07090D for steps at/after the split
+   (light ramps get darker → white labels; dark ramps get lighter → ink labels). */
+
+/* ── Responsive token overrides ─────────────────────────────────────── */
+@media (max-width: 599.98px) {
+  :root { --gutter: 16px; --appbar-h: 48px;
+    --type-headline: 500 18px/26px var(--font-ui); --type-readout: 600 24px/30px var(--font-ui); }
+}
+@media (min-width: 600px) and (max-width: 1023.98px) {
+  :root { --gutter: 20px; --appbar-h: 48px;
+    --type-headline: 500 20px/28px var(--font-ui); --type-readout: 600 26px/32px var(--font-ui); }
+}
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  :root { --gutter: 24px; --type-headline: 500 20px/28px var(--font-ui);
+    --type-readout: 600 24px/30px var(--font-ui); }
+}
+@media (min-width: 1600px) { :root { --type-headline: 500 24px/32px var(--font-ui);
+    --type-readout: 600 32px/38px var(--font-ui); } }
+@media (min-width: 2200px) { :root { --gutter: 40px; --type-headline: 500 26px/34px var(--font-ui);
+    --type-readout: 600 34px/40px var(--font-ui); --type-code: 400 13.5px/24px var(--font-mono); } }
+@media (max-height: 520px) {
+  :root { --appbar-h: 40px; --type-headline: 500 16px/22px var(--font-ui);
+    --type-readout: 600 20px/24px var(--font-ui); --type-readout-unit: 500 12px/16px var(--font-ui); }
+}
+@media (pointer: coarse) { :root { --row-h: 28px; } }
+
+/* ── Reduced motion: class set by core/motion.ts from matchMedia OR the in-app toggle ── */
+:root.motion-reduce {
+  --dur-1: 0ms; --dur-2: 120ms; --dur-3: 0ms; --dur-4: 0ms; --dur-5: 0ms;
+  --dur-count: 0ms; --dur-sweep: 0ms; --stagger: 0ms;
+  /* --dur-2 stays 120 ms for OPACITY-ONLY fades (tooltips, toasts, scrim). Nothing moves. */
+}

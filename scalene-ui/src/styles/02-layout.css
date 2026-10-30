@@ -1,0 +1,98 @@
+/* 02-layout.css — page frame, section rhythm, cards, placeholders, canvases (DESIGN.md §2.1–2.2, §6.1.1). */
+
+:root { --section-gap: 48px; --card-pad-y: 20px; --card-pad-x: 24px; --col-gap: 16px; }
+@media (max-width: 1279.98px) { :root { --section-gap: 32px; --card-pad-y: 16px; --card-pad-x: 20px; } }
+@media (max-width: 1023.98px) { :root { --card-pad-x: 16px; } }
+@media (max-width: 599.98px) { :root { --section-gap: 24px; --card-pad-y: 12px; --card-pad-x: 16px; --col-gap: 12px; } }
+@media (min-width: 1600px) { :root { --col-gap: 20px; } }
+@media (min-width: 2200px) { :root { --card-pad-y: 24px; --col-gap: 24px; } }
+@media (max-height: 520px) { :root { --section-gap: 24px; --card-pad-y: 12px; --card-pad-x: 16px; --col-gap: 12px; } }
+
+.scalene-app { min-width: 0; }
+
+main#main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+  width: 100%;
+  max-width: calc(var(--maxw) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: 16px max(var(--gutter), env(safe-area-inset-right)) 48px max(var(--gutter), env(safe-area-inset-left));
+  min-width: 0;
+}
+main#main:focus { outline: none; }
+
+.report-section { min-width: 0; }
+/* html's scroll-padding-top (01-base) already clears the sticky app bar for every in-page
+   scroll; a section margin on top of it doubled the offset (sections landed 128 px down).
+   The id selector also outranks the template's `.combined-stacks-section` margin (§7.1). */
+main#main > .report-section { scroll-margin-top: 0; }
+
+/* Section header (§2.2): h2 18/24 600 + one-line description 13/18, 40 px, 12 px below. */
+.section-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-height: 40px;
+  margin-bottom: 12px;
+}
+.section-head-text { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; min-width: 0; flex: 1 1 auto; }
+.section-title { font: var(--type-section); color: var(--fg); }
+.section-title:focus-visible { outline-offset: 4px; border-radius: var(--r-xs); }
+.section-desc { font-size: 13px; line-height: 18px; color: var(--fg-2); min-width: 0; }
+.section-head-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+/* Cards (§2.2): radius 12, hairline, surface, card shadow. Data marks live on cards only (§3.7). */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  min-width: 0;
+}
+.card-pad { padding: var(--card-pad-y) var(--card-pad-x); }
+.card-title { font: var(--type-title); color: var(--fg); }
+
+/* Lazy-section placeholder (§6.1.1): reserved height, static, no shimmer. */
+.section-placeholder {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 24px;
+  border: 1px solid var(--line); /* dark --sunken is close to --page: keep the reserved block visible */
+  border-radius: var(--r-lg);
+  background: var(--sunken);
+  color: var(--fg-3);
+  font: var(--type-caption);
+  text-align: center;
+}
+.section-error {
+  padding: 16px;
+  border-radius: var(--r-lg);
+  background: var(--danger-wash);
+  color: var(--danger);
+  font: var(--type-body);
+}
+
+/* Canvas pairs (§6.1.3): base + overlay stacked; the host sets the size. */
+.canvas-pair { position: relative; min-width: 0; }
+.canvas-pair > .cv-base, .canvas-pair > .cv-overlay { position: absolute; left: 0; top: 0; }
+.canvas-pair > .cv-overlay { touch-action: pan-y; }
+
+/* Empty state frame: the card sits centred under the app bar (short hosts: top-aligned). */
+.scalene-app.is-empty main#main { min-height: calc(100vh - var(--appbar-h) - 96px); justify-content: center; align-items: center; }
+:root.short .scalene-app.is-empty main#main { min-height: 0; justify-content: flex-start; }
+/* The card itself (.empty-card.empty-state) is styled in 80-shell.css. */
+
+/* Footer (§4.17): static, never covers content. */
+.site-footer {
+  border-top: 1px solid var(--line);
+  color: var(--fg-2);
+  font-size: 12.5px;
+  line-height: 18px;
+  padding: 24px max(var(--gutter), env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left));
+}
+.site-footer .footer-inner { max-width: var(--maxw); margin: 0 auto; } /* grid rows: 80-shell.css */
+.site-footer a { color: var(--fg-2); }
+.site-footer a:hover { color: var(--fg); }

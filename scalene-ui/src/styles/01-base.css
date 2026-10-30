@@ -1,0 +1,128 @@
+/* 01-base.css — reset, page defaults, code surfaces, focus, utilities (DESIGN.md §2.2, §3.5, §6.2). */
+
+/* VS Code high contrast: dark tokens plus visible hairlines (§2.5). */
+:root[data-contrast="high"] { --line: var(--fg-3); --line-strong: var(--fg-3); }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--page);
+  color: var(--fg);
+  scroll-padding-top: calc(var(--appbar-h) + 12px);
+  overflow-x: clip; /* safety net only: components must fit (§2.2) */
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--page);
+  color: var(--fg);
+  font: var(--type-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+h1, h2, h3, h4, p, dl, dd, figure, ol, ul { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+button, input, select, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+button:disabled, [aria-disabled="true"] { cursor: default; }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+img, svg, canvas { display: block; }
+svg.icon { flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+[hidden] { display: none !important; }
+::selection { background: var(--select); color: var(--fg); }
+
+/* Code surfaces render verbatim (§3.5, must-fix 1). */
+.code, code, kbd, pre, .mono, .chip-code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  tab-size: 4;
+}
+/* Important: a later `font:` shorthand on a code surface resets font-variant-ligatures (round 1
+   verification found key chips, the lens location and function-view source with ligatures on). */
+.code, code, kbd, pre, .mono, .chip-code, .cv-src {
+  font-variant-ligatures: none !important;
+  font-feature-settings: "liga" 0, "calt" 0, "dlig" 0 !important;
+}
+pre { margin: 0; white-space: pre-wrap; }
+
+.num, .tabular { font-variant-numeric: tabular-nums; }
+
+/* Focus ring (§4.21): ink, 2 px + 2 px offset, everywhere; inset inside dense rows. */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.focus-inset:focus-visible, canvas:focus-visible { outline-offset: -2px; }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip links (§6.2.2, must-fix 22): off-screen until focused, then at (8, 8). */
+.skip-link {
+  position: fixed;
+  top: 8px; left: 8px;
+  z-index: var(--z-skip);
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: var(--fg);
+  color: var(--surface);
+  font: var(--type-body-strong);
+  text-decoration: none;
+  transform: translateY(calc(-100% - 16px));
+}
+.skip-link:focus, .skip-link:focus-visible { transform: none; outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Micro label: 11/14 600 uppercase, used for channel labels and readout titles. */
+.micro { font: var(--type-micro); letter-spacing: var(--ls-micro); text-transform: uppercase; color: var(--fg-2); }
+.caption { font: var(--type-caption); color: var(--fg-2); }
+.muted { color: var(--fg-3); }
+
+/* Invisible controls in source (round 1, "Trojan Source"): each one is isolated so it cannot
+   reorder the rest of the line, and shown as a small danger badge with its code point. */
+.t-ctl { unicode-bidi: isolate; }
+.t-ctl::before {
+  display: inline-block;
+  margin: 0 1px;
+  padding: 0 3px;
+  border-radius: var(--r-xs);
+  background: var(--danger-wash);
+  color: var(--danger);
+  font: 600 10px/14px var(--font-ui);
+  font-style: normal;
+  vertical-align: 1px;
+}
+.t-ctl.u061c::before { content: "U+061C"; }
+.t-ctl.u200b::before { content: "U+200B"; }
+.t-ctl.u200c::before { content: "U+200C"; }
+.t-ctl.u200d::before { content: "U+200D"; }
+.t-ctl.u200e::before { content: "U+200E"; }
+.t-ctl.u200f::before { content: "U+200F"; }
+.t-ctl.u202a::before { content: "U+202A"; }
+.t-ctl.u202b::before { content: "U+202B"; }
+.t-ctl.u202c::before { content: "U+202C"; }
+.t-ctl.u202d::before { content: "U+202D"; }
+.t-ctl.u202e::before { content: "U+202E"; }
+.t-ctl.u2060::before { content: "U+2060"; }
+.t-ctl.u2061::before { content: "U+2061"; }
+.t-ctl.u2062::before { content: "U+2062"; }
+.t-ctl.u2063::before { content: "U+2063"; }
+.t-ctl.u2064::before { content: "U+2064"; }
+.t-ctl.u2066::before { content: "U+2066"; }
+.t-ctl.u2067::before { content: "U+2067"; }
+.t-ctl.u2068::before { content: "U+2068"; }
+.t-ctl.u2069::before { content: "U+2069"; }
+.t-ctl.ufeff::before { content: "U+FEFF"; }
+/* Labels (paths, locations, code chips) never leak direction into the text around them. */
+.chip-code, .mono, code, kbd { unicode-bidi: isolate; }
+
