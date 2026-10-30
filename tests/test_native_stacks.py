@@ -54,6 +54,8 @@ from scalene.scalene_json import (
 
 WINDOWS = sys.platform == "win32"
 SA_SIGINFO = getattr(signal, "SA_SIGINFO", None)
+# Captured at collection, before any test can redirect sys.executable.
+_COLLECTION_EXECUTABLE = sys.executable
 
 
 # ---------------------------------------------------------------------------
@@ -89,10 +91,13 @@ def _real_python_executable() -> str:
     LD_PRELOAD=libscalene.so and re-execs through ``python -m scalene
     run`` — disastrous as a "fresh interpreter" for handler-probe tests.
 
-    Prefer sys._base_executable (set by CPython startup before any test
-    monkey-patching) or /proc/self/exe (kernel-recorded path of the
-    running interpreter). Fall back to sys.executable.
+    Prefer sys.executable as it was at collection: inside a virtualenv,
+    sys._base_executable and /proc/self/exe both name the interpreter
+    outside it, which can't see the venv's installed scalene. Then fall
+    back to those, then to sys.executable.
     """
+    if not _COLLECTION_EXECUTABLE.startswith("/tmp/scalene"):
+        return _COLLECTION_EXECUTABLE
     base = getattr(sys, "_base_executable", None)
     if base and os.path.isfile(base) and not base.startswith("/tmp/scalene"):
         return base
